@@ -1,0 +1,7 @@
+{
+  "mcp_url": "http://10.0.0.139:1236/mcp",
+  "token": "1234",
+  "web_api": "http://10.0.0.139:1122",
+  "updated": "2026-07-26",
+  "note": "Single SOT for phone LAN endpoint. Update here when DHCP IP changes; skills/scripts should read this file."
+}

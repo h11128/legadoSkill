@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local dumps / device artifacts (do not commit)
+temp/
+backups/
+*.log
+
+# IDE noise (keep rules/skills that are intentional)
+.cursor/hooks.json
+.cursor/audit-hooks/
+.cursor/skills/
+.cursor/agents/
+.cursor/*.bak
+.cursor/rules/*.bak
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
