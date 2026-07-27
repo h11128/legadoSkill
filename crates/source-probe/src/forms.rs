@@ -125,6 +125,7 @@ pub fn candidates_from_forms(forms: &[ProbeForm]) -> Vec<SearchCandidate> {
 fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
     let action = &f.action;
     let fields = f.fields.to_ascii_lowercase();
+    let field_names: Vec<&str> = fields.split(',').filter(|s| !s.is_empty()).collect();
     let path = path_of(action);
     let mut rel = if path.starts_with('/') {
         path
@@ -132,15 +133,30 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
         format!("/{}", path.trim_start_matches('/'))
     };
 
+    // Prefer real form field (biduju: keyword; jieqi: searchkey).
+    let field = SEARCH_FIELDS
+        .iter()
+        .find(|c| field_names.iter().any(|f| f == *c))
+        .copied()
+        .unwrap_or_else(|| {
+            if action.contains("modules/article/search") {
+                "searchkey"
+            } else {
+                "keyword"
+            }
+        });
+
     if action.contains("search.php") || action.contains("modules/article/search") {
         let use_post =
             f.method.eq_ignore_ascii_case("POST") || action.contains("modules/article/search");
         let su = if use_post {
             format!(
-                "{rel},{{\n  \"method\": \"POST\",\n  \"body\": \"searchkey={{{{key}}}}&searchtype=all\"\n}}"
+                "{rel},{{\n  \"method\": \"POST\",\n  \"body\": \"{field}={{{{key}}}}&searchtype=all\"\n}}"
             )
-        } else {
+        } else if field == "searchkey" {
             format!("{rel}?searchkey={{{{key}}}}&searchtype=all")
+        } else {
+            format!("{rel}?{field}={{{{key}}}}")
         };
         return Some(SearchCandidate {
             search_url: su,
@@ -148,15 +164,9 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
         });
     }
 
-    let field_names: Vec<&str> = fields.split(',').filter(|s| !s.is_empty()).collect();
     if !field_names.iter().any(|n| SEARCH_FIELDS.contains(n)) {
         return None;
     }
-    let field = SEARCH_FIELDS
-        .iter()
-        .find(|c| field_names.iter().any(|f| f == *c))
-        .copied()
-        .unwrap_or("keyword");
 
     let mut extra = String::new();
     if action.contains("/e/sch") || field == "keyboard" {
@@ -209,5 +219,23 @@ mod tests {
         let cands = candidates_from_forms(&forms);
         assert!(!cands.is_empty());
         assert!(cands[0].search_url.contains("search.php"));
+        assert!(cands[0].search_url.contains("q={{key}}"));
+    }
+
+    #[test]
+    fn search_php_uses_keyword_field() {
+        let html = r#"<form action="http://www.biduju.net/search.php" method="get">
+          <input name="keyword" type="text"/>
+          <input name="submit" type="submit"/>
+        </form>"#;
+        let forms = forms_from_html(html, "http://www.biduju.net/");
+        let cands = candidates_from_forms(&forms);
+        assert!(!cands.is_empty());
+        assert!(
+            cands[0].search_url.contains("keyword={{key}}"),
+            "got {}",
+            cands[0].search_url
+        );
+        assert!(!cands[0].search_url.contains("searchkey="));
     }
 }

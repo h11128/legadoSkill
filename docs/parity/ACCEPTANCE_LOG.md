@@ -32,4 +32,15 @@ python scripts/repair_source.py verify --url 'http://www.biduju.net' --keyword �
 
 Also same pattern: `http://www.yqk.net/` → search + fake_detail.
 
+## Rust end-to-end fix (2026-07-27)
+
+```
+source-cli diagnose --url 'http://www.biduju.net' → layer=search fake_detail=true
+source-cli repair --mode oneshot --url 'http://www.biduju.net'
+→ searchUrl keyword={{key}}+GBK; bookList=class.list@table (+name/bookUrl/cover/intro)
+→ status=fixed; device 校验成功 (2548ms)
+```
+
+Root cause fixed in Rust: `search.php` forms no longer hardcode `searchkey` (biduju uses `keyword`); GB meta → charset option; live fetch ranks bookList.
+
 Forbidden: claim cutover / delete Python without §12.6 PERF_BASELINE.

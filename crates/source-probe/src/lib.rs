@@ -1,11 +1,16 @@
-//! Search probe: forms, common paths, offline ranking.
+//! Search probe: forms, common paths, offline ranking, bookList hints.
 
 mod forms;
+mod hints;
 mod paths;
 mod rank;
 mod score;
 
 pub use forms::{candidates_from_forms, forms_from_html, ProbeForm, SearchCandidate};
+pub use hints::{
+    append_charset_gbk, encode_query_value, guess_booklist, html_needs_gbk, materialize_search_url,
+    BookListHints,
+};
 pub use paths::{common_path_candidates, COMMON_GET_TEMPLATES};
 pub use rank::{
     pick_best, rank_offline, rank_with_html, score_candidate_path, ProbeBest, RankedCandidate,

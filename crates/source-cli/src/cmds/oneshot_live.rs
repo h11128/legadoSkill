@@ -14,11 +14,13 @@ use source_mcp::{
     FsChannelPort, JsonlLedgerPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort,
 };
 use source_patch::apply_safe_rule_fixes;
-use source_ports::{ChannelPort, Clock, HtmlFetchPort, SourceRepository};
+use source_ports::{ChannelPort, Clock, DiagnosePort, HtmlFetchPort, SourceRepository};
 use source_spine::{
     run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts,
 };
-use source_types::{FetchResult, HeaderMap, PortError, SourceKey, Url};
+use source_types::{FetchResult, HeaderMap, Layer, PortError, SourceKey, Url};
+
+use super::search_plan::build_search_layer_plan;
 
 #[cfg(feature = "gate_full")]
 use source_gate::{classify_one, ClassifyOpts};
@@ -149,6 +151,7 @@ pub fn repair_one_url(
         }
     };
     let _smell_changes = apply_safe_rule_fixes(&mut source);
+    let source_for_diag = source.clone();
 
     let debug_text = if skip_diagnose {
         String::new()
@@ -217,6 +220,36 @@ pub fn repair_one_url(
     let reg = AdapterRegistry::with_seed_families();
     let plugin = RegistryRepairPlugin(&reg);
     let diag_port = ParseDiagnosePort;
+
+    // Pre-parse layer so search can use probe+charset+bookList plan (Rust-only).
+    let layer_preview = if !skip_diagnose && !debug_text.is_empty() {
+        match Url::new(url.trim()) {
+            Ok(u) => {
+                let d = diag_port.diagnose(u, &source_for_diag, &debug_text, None);
+                Some(d.layer)
+            }
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    let mut search_plan = None;
+    if layer_preview == Some(Layer::Search) {
+        let home = ctx.html_text();
+        if !home.trim().is_empty() {
+            let fam = source_types::SiteFamily::new(source_types::SiteFamily::GENERIC_FORM);
+            search_plan = build_search_layer_plan(url.trim(), &home, key, fam);
+            if let Some(ref p) = search_plan {
+                eprintln!(
+                    "repair: search-layer plan ops={} rationale={}",
+                    p.ops.len(),
+                    p.rationale
+                );
+            }
+        }
+    }
+
     let diagnose = if skip_diagnose || debug_text.is_empty() {
         DiagnoseInput::None
     } else {
@@ -226,10 +259,16 @@ pub fn repair_one_url(
             port: &diag_port,
         }
     };
+
+    let plan_or = match search_plan {
+        Some(p) => PlanOrPlugin::Plan(p),
+        None => PlanOrPlugin::Plugin(&plugin),
+    };
+
     let result = match run_repair_oneshot(
         ctx,
         &ports,
-        PlanOrPlugin::Plugin(&plugin),
+        plan_or,
         GateInput::Injected(gate),
         Some(&reg),
         diagnose,

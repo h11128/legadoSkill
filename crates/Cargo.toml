@@ -59,3 +59,4 @@ jsonschema = "0.28"
 url = "2"
 ureq = { version = "2.12", default-features = true, features = ["gzip", "tls"] }
 base64 = "0.22"
+encoding_rs = "0.8"

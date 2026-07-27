@@ -31,3 +31,5 @@ source_diagnose = { workspace = true }
 source_migrate = { workspace = true }
 source_hunt = { workspace = true }
 source_contracts = { workspace = true }
+encoding_rs = { workspace = true }
+url = { workspace = true }

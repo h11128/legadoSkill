@@ -12,6 +12,7 @@ mod probe_score;
 mod progress;
 mod repair;
 mod repair_dry;
+mod search_plan;
 mod version;
 mod video_route;
 
