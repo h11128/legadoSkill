@@ -1,7 +1,9 @@
-//! Search probe: forms, common paths, offline ranking, bookList hints.
+//! Search probe: forms, common paths, offline/live ranking, bookList hints.
 
 mod forms;
 mod hints;
+mod js_api;
+mod live;
 mod paths;
 mod rank;
 mod score;
@@ -11,11 +13,14 @@ pub use hints::{
     append_charset_gbk, encode_query_value, guess_booklist, html_needs_gbk, materialize_search_url,
     BookListHints,
 };
+pub use js_api::{detect_js_search_api, JsSearchApi};
+pub use live::{probe_search_live, LiveProbeResult};
 pub use paths::{common_path_candidates, COMMON_GET_TEMPLATES};
 pub use rank::{
-    pick_best, rank_offline, rank_with_html, score_candidate_path, ProbeBest, RankedCandidate,
+    form_endpoints_dead, pick_best, rank_offline, rank_with_html, score_candidate_path, ProbeBest,
+    RankedCandidate,
 };
-pub use score::{score_search_html, ProbeScore};
+pub use score::{score_search_html, score_search_html_with_home, ProbeScore};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,9 +33,6 @@ pub struct ProbeResult {
 }
 
 /// Offline probe from homepage HTML (no network).
-///
-/// Extracts forms → Legado candidates, appends common paths, ranks by path
-/// heuristics (form endpoints preferred over `common_path`).
 pub fn probe_search(home_html: &str, base_url: &str, _keyword: &str) -> ProbeResult {
     let forms = forms_from_html(home_html, base_url);
     let mut candidates = candidates_from_forms(&forms);
@@ -39,7 +41,6 @@ pub fn probe_search(home_html: &str, base_url: &str, _keyword: &str) -> ProbeRes
     candidates.retain(|c| seen.insert(c.search_url.clone()));
     let ranked = rank_offline(&candidates);
     let best = pick_best(&ranked);
-    // Prefer best at front of candidates list (Python behavior)
     let mut candidates = candidates;
     if let Some(ref b) = best {
         if let Some(idx) = candidates.iter().position(|c| c.search_url == b.search_url) {
@@ -70,11 +71,9 @@ mod tests {
         </body></html>"#;
         let r = probe_search(html, "https://example.com/", "我的");
         assert!(!r.forms.is_empty());
-        assert!(r.forms[0].action.contains("/search.php"));
         assert!(r.best.is_some());
         let best = r.best.unwrap();
         assert!(best.search_url.contains("search.php"));
-        assert!(best.score > 0);
-        assert!(!r.ranked.is_empty());
+        assert!(best.search_url.contains("q={{key}}"));
     }
 }

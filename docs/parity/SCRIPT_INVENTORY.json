@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-27T19:30:23.365885+00:00",
-  "git_sha": "c1b39b0",
+  "generated_at": "2026-07-27T19:51:58.005079+00:00",
+  "git_sha": "344f97d",
   "matrix_doc": "docs/repair-adapter-architecture.md",
   "matrix_note": null,
   "scripts": [
@@ -42,6 +42,11 @@
     {
       "name": "parity_rust_suite.py",
       "path": "scripts/parity_rust_suite.py",
+      "has_main": true
+    },
+    {
+      "name": "parity_search_suite.py",
+      "path": "scripts/parity_search_suite.py",
       "has_main": true
     },
     {
@@ -257,6 +262,7 @@
     "mcp_discover.py",
     "parity_inventory.py",
     "parity_rust_suite.py",
+    "parity_search_suite.py",
     "parity_selftest.py",
     "precheck_sources.py",
     "repair_bench10.py",
@@ -298,6 +304,7 @@
     "mcp_discover.py",
     "parity_inventory.py",
     "parity_rust_suite.py",
+    "parity_search_suite.py",
     "parity_selftest.py",
     "precheck_sources.py",
     "repair_bench10.py",
@@ -348,6 +355,7 @@
       "mcp_discover.py",
       "parity_inventory.py",
       "parity_rust_suite.py",
+      "parity_search_suite.py",
       "parity_selftest.py",
       "precheck_sources.py",
       "repair_bench10.py",

@@ -1,0 +1,8 @@
+{
+  "fixture": "form_biduju_keyword",
+  "description": "search.php form must use keyword field, not hardcoded searchkey",
+  "html": "<form action=\"http://www.biduju.net/search.php\" method=\"get\"><input name=\"keyword\" type=\"text\"/><input name=\"submit\" type=\"submit\"/></form>",
+  "base_url": "http://www.biduju.net/",
+  "expected_best_contains": ["keyword={{key}}"],
+  "forbidden_best_contains": ["searchkey="]
+}

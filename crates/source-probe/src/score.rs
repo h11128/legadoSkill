@@ -1,70 +1,160 @@
-use serde::{Deserialize, Serialize};
+//! Rank search-result HTML. Higher is better.
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ProbeScore {
     pub score: i32,
     pub reasons: Vec<String>,
     pub dead: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub book_list_hint: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub book_url_hint: Option<String>,
 }
 
-/// Rank search HTML. Higher is better. `dead` ⇒ do not rewrite selectors.
-pub fn score_search_html(html: &str, query: &str, http_status: u16) -> ProbeScore {
-    let mut score = 0;
-    let mut reasons: Vec<String> = Vec::new();
-    let mut dead = false;
+fn pid_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"(?i)pid\s*:\s*(\d+)").unwrap())
+}
 
+fn bookish_href_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r#"(?i)href=["'][^"']*(?:/novel/\d|/book/\d|/txtbook/\d|\.html)[^"']*["']"#)
+            .unwrap()
+    })
+}
+
+/// Score search HTML (optional home HTML for fake-home penalty).
+pub fn score_search_html(html: &str, query: &str, http_status: u16) -> ProbeScore {
+    score_search_html_with_home(html, query, http_status, None)
+}
+
+pub fn score_search_html_with_home(
+    html: &str,
+    query: &str,
+    http_status: u16,
+    home_html: Option<&str>,
+) -> ProbeScore {
+    let mut out = ProbeScore::default();
     if http_status >= 500 {
-        return ProbeScore {
-            score: -100,
-            reasons: vec![format!("http_{http_status}")],
-            dead: true,
-        };
+        out.score = -100;
+        out.reasons.push(format!("http_{http_status}"));
+        out.dead = true;
+        return out;
+    }
+    // Cloudflare / empty error bodies often arrive as 200 with tiny payload
+    if html.trim().len() < 80
+        && (html.contains("error code")
+            || html.contains("521")
+            || html.contains("Just a moment")
+            || html.is_empty())
+    {
+        out.score = -80;
+        out.reasons.push("empty_or_cf_error".into());
+        out.dead = true;
+        return out;
     }
 
     let lower = html.to_ascii_lowercase();
-    for (needle, w, tag) in [
-        ("id=\"sitebox\"", 5, "list_sitebox"),
-        ("item fiction", 5, "list_xchina"),
-        ("class=\"bookbox\"", 3, "list_bookbox"),
-        ("hot_sale", 3, "list_hot_sale"),
-        ("result-list", 3, "list_result"),
+    for (needle, w, tag, bl) in [
+        ("id=\"sitebox\"", 5, "list_sitebox", Some("#sitebox dl")),
+        ("id='sitebox'", 5, "list_sitebox", Some("#sitebox dl")),
+        ("item fiction", 5, "list_xchina", Some(".item.fiction")),
+        ("class=\"bookbox\"", 3, "list_bookbox", Some(".bookbox")),
+        ("hot_sale", 3, "list_hot_sale", Some(".hot_sale")),
+        ("result-list", 3, "list_result", Some(".result-list")),
+        ("novelslist", 3, "list_novelslist", Some(".novelslist2 li")),
+        ("class=\"bookname\"", 3, "list_bookname", None),
+        ("txt-list", 2, "list_txt", Some(".txt-list li")),
+        ("class=\"list\"", 2, "list_class_list", None),
+        ("ss_box", 2, "list_ss_box", Some(".ss_box")),
     ] {
         if lower.contains(needle) {
-            score += w;
-            reasons.push(tag.into());
+            out.score += w;
+            out.reasons.push(tag.into());
+            if out.book_list_hint.is_none() {
+                if let Some(h) = bl {
+                    out.book_list_hint = Some(h.into());
+                }
+            }
         }
     }
 
+    let bookish_n = bookish_href_re().find_iter(html).count();
+    if bookish_n >= 2 {
+        out.score += 3;
+        out.reasons.push(format!("bookish_hrefs_{bookish_n}"));
+    }
+
+    if pid_re().is_match(html) {
+        out.score += 4;
+        out.reasons.push("pid_js".into());
+        out.book_url_hint =
+            Some("a@href##pid:\\s*(\\d+)##/novel/$1.html###".into());
+    }
+
     if !query.is_empty() && html.contains(query) {
-        score += 2;
-        reasons.push("query_echo".into());
+        out.score += 2;
+        out.reasons.push("query_echo".into());
     }
 
     if lower.contains("search.php?q=") || lower.contains("xunsearch") {
-        score += 2;
-        reasons.push("xunsearch_shape".into());
+        out.score += 4;
+        out.reasons.push("xunsearch_shape".into());
     }
 
-    // Fake home: nav chrome without list markers
-    let listish = reasons.iter().any(|r| r.starts_with("list_"));
+    if lower.contains("出错啦")
+        || lower.contains("页面不存在")
+        || lower.contains(">404<")
+        || lower.contains("没找到你需要的页面")
+    {
+        out.score -= 8;
+        out.reasons.push("error_page".into());
+    }
+
+    let listish = out.reasons.iter().any(|r| r.starts_with("list_"));
     if !listish
         && (lower.contains("首页") || lower.contains(">home<") || lower.contains("nav-bar"))
         && html.len() < 8000
     {
-        score -= 5;
-        reasons.push("fake_home_penalty".into());
+        out.score -= 5;
+        out.reasons.push("fake_home_penalty".into());
+    }
+
+    if let Some(home) = home_html {
+        if let (Some(ht), Some(st)) = (page_title(home), page_title(html)) {
+            if !ht.is_empty() && ht == st && !listish {
+                out.score -= 6;
+                out.reasons.push("same_title_as_home".into());
+            }
+        }
     }
 
     if lower.contains("验证码") || (lower.contains("password") && lower.contains("login")) {
-        dead = true;
-        reasons.push("wall".into());
+        out.dead = true;
+        out.reasons.push("wall".into());
     }
 
-    ProbeScore {
-        score,
-        reasons,
-        dead,
+    // Prefer table list when class.list present
+    if out.book_list_hint.is_none() && lower.contains("class=\"list\"") && lower.contains("<table")
+    {
+        out.book_list_hint = Some("class.list@table".into());
     }
+
+    out
+}
+
+fn page_title(html: &str) -> Option<String> {
+    let lower = html.to_ascii_lowercase();
+    let start = lower.find("<title")?;
+    let rest = &html[start..];
+    let end = rest.to_ascii_lowercase().find("</title>")?;
+    let inner = rest.get(7..end)?.trim();
+    Some(inner.chars().take(80).collect())
 }
 
 #[cfg(test)]
@@ -83,6 +173,12 @@ mod tests {
         let html = r#"<div id="sitebox"><dl><dt>书</dt></dl><dl><dt>书2</dt></dl></div>"#;
         let s = score_search_html(html, "书", 200);
         assert!(s.score >= 5);
-        assert!(!s.dead);
+        assert_eq!(s.book_list_hint.as_deref(), Some("#sitebox dl"));
+    }
+
+    #[test]
+    fn error_page_penalty() {
+        let s = score_search_html("<title>没找到你需要的页面--必读居</title>", "x", 200);
+        assert!(s.score < 0);
     }
 }

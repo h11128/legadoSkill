@@ -14,7 +14,15 @@ if str(_SCRIPTS) not in sys.path:
 
 from parity_suites import SUITE_RUNNERS
 
-ALL_SUITES = ("fixtures", "cli-help", "imports", "schemas", "inventory", "rust-cli")
+ALL_SUITES = (
+    "fixtures",
+    "cli-help",
+    "imports",
+    "schemas",
+    "inventory",
+    "rust-cli",
+    "search-parity",
+)
 
 
 def main() -> int:

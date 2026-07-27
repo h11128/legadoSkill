@@ -357,18 +357,39 @@ def _candidates_from_forms(uniq: list[dict[str, str]]) -> list[dict[str, str]]:
         path = urlparse(action).path or action
         rel = path if path.startswith("/") else "/" + path.lstrip("/")
         if "search.php" in action or "modules/article/search" in action:
-            body = "searchkey={{key}}&searchtype=all"
+            # Prefer real form field (biduju=keyword; jieqi=searchkey). Do NOT hardcode searchkey.
+            field = "keyword"
+            for cand in ("searchkey", "keyword", "keyboard", "q", "wd", "s"):
+                if cand in fields.split(","):
+                    field = cand
+                    break
+            if "modules/article/search" in action and "searchkey" not in fields.split(","):
+                field = "searchkey"
+            body = f"{field}={{{{key}}}}&searchtype=all"
             use_post = f.get("method", "POST").upper() != "GET" or "modules/article/search" in action
-            candidates.append(
-                {
-                    "searchUrl": (
-                        f'{rel},{{\n  "method": "POST",\n  "body": "{body}"\n}}'
-                        if use_post
-                        else f"{rel}?searchkey={{{{key}}}}&searchtype=all"
-                    ),
-                    "from": f.get("source") or "html",
-                }
-            )
+            if use_post:
+                candidates.append(
+                    {
+                        "searchUrl": (
+                            f'{rel},{{\n  "method": "POST",\n  "body": "{body}"\n}}'
+                        ),
+                        "from": f.get("source") or "html",
+                    }
+                )
+            elif field == "searchkey":
+                candidates.append(
+                    {
+                        "searchUrl": f"{rel}?searchkey={{{{key}}}}&searchtype=all",
+                        "from": f.get("source") or "html",
+                    }
+                )
+            else:
+                candidates.append(
+                    {
+                        "searchUrl": f"{rel}?{field}={{{{key}}}}",
+                        "from": f.get("source") or "html",
+                    }
+                )
         elif any(x in fields for x in ("keyword", "searchkey", "q", "wd", "s", "keyboard")):
             field = "keyword"
             for cand in ("searchkey", "keyword", "keyboard", "q", "wd", "s"):

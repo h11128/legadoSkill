@@ -279,6 +279,12 @@ def run_rust_cli_suite() -> dict[str, Any]:
     return _run()
 
 
+def run_search_parity_suite() -> dict[str, Any]:
+    from parity_search_suite import run_search_parity_suite as _run
+
+    return _run()
+
+
 SUITE_RUNNERS: dict[str, Callable[[], dict[str, Any]]] = {
     "fixtures": run_fixtures_suite,
     "cli-help": run_cli_help_suite,
@@ -286,4 +292,5 @@ SUITE_RUNNERS: dict[str, Callable[[], dict[str, Any]]] = {
     "schemas": run_schemas_suite,
     "inventory": run_inventory_suite,
     "rust-cli": run_rust_cli_suite,
+    "search-parity": run_search_parity_suite,
 }
