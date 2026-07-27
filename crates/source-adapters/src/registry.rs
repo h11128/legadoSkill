@@ -8,20 +8,22 @@ use source_types::{
     PatchPlan, RepairConfig, SiteFamily, Unrepairable, Url,
 };
 
-use crate::context::RepairContext;
+use source_ports::{CreatePlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
+
 use crate::families::{
     fiction_list_xchina_rules, generic_form_rules, jieqi_mobile_rules, xunsearch_pid_rules,
     FictionListXchina, GenericForm, JieqiMobile, XunsearchPid,
 };
-use crate::traits::{CreatePlugin, OptimizePlugin, RepairPlugin};
 
+#[derive(Debug)]
 struct Entry {
     family: SiteFamily,
     rules: Vec<FingerprintRule>,
 }
 
 /// Maps `SiteFamily` → fingerprints; dispatches seed plugins by id.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct AdapterRegistry {
     entries: HashMap<String, Entry>,
 }
@@ -141,6 +143,24 @@ mod tests {
             &RepairConfig::default(),
         );
         assert_eq!(r.family.as_str(), SiteFamily::XUNSEARCH_PID);
+    }
+
+    #[test]
+    fn unknown_family_does_not_silently_generic_form() {
+        let reg = AdapterRegistry::with_seed_families();
+        let html = r#"<form action="/s.php"><input name="q"/></form>"#;
+        let ctx = RepairContext::new(
+            SourceKey::new("https://m.wmp8.com/"),
+            BookSource::new(json!({})),
+            SiteFamily::unknown(),
+        )
+        .with_html("https://m.wmp8.com/", html);
+        match reg.repair(&ctx) {
+            AdapterOutcome::Unrepairable(u) => {
+                assert!(u.reason.contains("no repair plugin"));
+            }
+            other => panic!("expected Unrepairable for unknown, got {other:?}"),
+        }
     }
 
     #[test]

@@ -1271,6 +1271,7 @@ dependencies = [
  "source_identify",
  "source_patch",
  "source_pattern",
+ "source_ports",
  "source_types",
 ]
 
@@ -1293,13 +1294,17 @@ dependencies = [
  "chrono",
  "clap",
  "serde_json",
+ "source_adapters",
  "source_cache",
  "source_gate",
+ "source_mcp",
  "source_patch",
+ "source_ports",
  "source_probe",
  "source_spine",
  "source_types",
  "source_video",
+ "ureq",
 ]
 
 [[package]]
@@ -1412,6 +1417,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "source_adapters",
  "source_contracts",
  "source_patch",
  "source_ports",

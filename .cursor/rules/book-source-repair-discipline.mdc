@@ -44,11 +44,15 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
 
 ```
 repair_source.py channel
+# Prefer Rust oneshot when available:
+#   source-cli gate --url … | source-cli repair --url …
 python scripts/repair_wave.py --urls-file urls.txt   # parallel PC patch + one batch verify
 # or single:
 python scripts/repair_one.py --url … --fail-msg …
 python scripts/repair_session_log.py append --url … --step check --result '…'
 ```
+
+Python scripts remain valid until §12 cutover; prefer `source-cli` for gate/oneshot when the bin is built.
 
 Cache: `temp/full_fix/cache/`. MCP: `config/mcp_defaults.json`.  
 Ledger: `temp/full_fix/repair_session_ledger.jsonl`.  

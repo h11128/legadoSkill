@@ -8,19 +8,16 @@ Spec anchors in this doc: **§3 types**, **§8 contracts**, **§9 database**, **
 
 ---
 
-## 0. Operational rule (until parity)
+## 0. Operational rule (dual-path)
 
-**Until this design is fully implemented and §12 acceptance proves functional + performance parity with current Python, daily repair/check work MUST keep using `scripts/*.py` as-is.**
+**Prefer Rust `source-cli` for gate / oneshot repair when the binary is available.** Python `scripts/*.py` remain valid until an explicit §12 cutover sign-off (live-smoke + §12.6 perf).
 
-| Do now | Do not do yet |
-|--------|----------------|
-| `repair_deep_loop.py --mode oneshot\|batch`, `repair_one.py`, `repair_prefilter.py`, `repair_progress.py`, MCP scripts, etc. | Point Skill / agents at new `source_*` entrypoints as the default path |
-| Improve existing scripts when fixing real repair bugs | Rewrite “onto the spine” mid-session and abandon working CLIs |
-| Treat this doc as a **future** target + parity contract | Claim migration done without §12.3 (incl. perf checks in §12.6) |
+| Prefer now | Still OK | Do not claim yet |
+|------------|----------|------------------|
+| `source-cli gate`, `repair`, `repair-dry`, `video-route` | `repair_deep_loop.py`, `repair_one.py`, progress/queue/MCP glue | Full cutover / “Python deprecated” without §12.3+§12.6 |
+| Skill documents both paths (Rust first) | Improve Python shims that call Rust | Abandon working Python mid-session without parity |
 
-Skill and work-context should stay on the **current Python toolkit** until an explicit cutover after parity sign-off.
-
-**Implementation language (operator override 2026-07-26):** core libraries ship in **Rust** (`crates/`); Python `scripts/*.py` remain thin shims / MCP glue until §12 parity + perf green, then Skill cutover. See §14 + §11.7.
+**Implementation language:** core libraries ship in **Rust** (`crates/`); adapters are **wired into spine oneshot**. Python remains MCP glue + batch/queue until cutover. See §14 + §11.7.
 
 ---
 
@@ -1431,7 +1428,7 @@ Load order: defaults → `config/repair_config.json` → env `REPAIR_*` → CLI 
 - **Domain code** mutates only via `PatchOp` + typed path getters/setters (`search_url()`, `rule_search_book_list()`, …). Minimal getters landed on `BookSource` in `source-types`; expand as adapters need them.
 - Do not pass bare `dict` through public Rust APIs without `BookSource` newtype. Python shims may keep `dict` until cutover.
 
-**Adapters ↔ spine wiring (2026-07-27):** `source-adapters` and `source-spine` currently each define local `RepairContext` / plugin traits (temporary duplication). Spine oneshot uses spine-local plugins (`NoopRepairPlugin`); adapters registry is **not** injected yet. Unify traits into one SOT before claiming adapter-driven repair.
+**Adapters ↔ spine wiring (2026-07-27):** `RepairContext` lives in `source-types`; plugin traits + `IdentifyPort` in `source-ports`. `AdapterRegistry` implements identify and is injected via `RegistryRepairPlugin` into `run_repair_oneshot`. CLI: `source-cli repair` / `repair-dry`. Not a full §12 cutover.
 
 ### 14.9 Observability
 

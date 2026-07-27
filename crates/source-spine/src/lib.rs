@@ -7,6 +7,7 @@ mod context;
 mod error;
 mod idempotency;
 mod oneshot;
+mod oneshot_gate;
 mod outcome;
 mod plugin;
 mod report_emit;
@@ -22,7 +23,8 @@ pub use oneshot::{
     run_repair_oneshot, GateFn, GateInput, OneshotResult, PlanOrPlugin, RepairPorts,
 };
 pub use outcome::{ApplyOutcome, IdempotencyStore, MemoryIdempotency};
-pub use plugin::{
-    identify_stub, CreatePlugin, FamilyPlugin, NoopRepairPlugin, OptimizePlugin, RepairPlugin,
-};
+pub use plugin::{identify_stub, NoopRepairPlugin};
 pub use report_emit::{emit_report_json, emit_report_line, REPORT_JSON_PREFIX};
+pub use source_ports::{
+    CreatePlugin, FamilyPlugin, IdentifyPort, OptimizePlugin, RepairPlugin,
+};

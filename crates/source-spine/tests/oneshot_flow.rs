@@ -176,6 +176,7 @@ fn channel_busy_maps_to_exit_5() {
         PlanOrPlugin::Plan(sample_plan(url)),
         GateInput::Injected(gate),
         None,
+        None,
     )
     .unwrap();
     assert_eq!(out.exit_code, 5);
@@ -206,6 +207,7 @@ fn gate_skip_emits_skipped_report() {
         &ports,
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
+        None,
         None,
     )
     .unwrap();
@@ -246,6 +248,7 @@ fn gate_migrate_early_exits_without_apply() {
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
         None,
+        None,
     )
     .unwrap();
     assert_eq!(out.report.status, ReportStatus::Migrated);
@@ -282,6 +285,7 @@ fn noop_plugin_returns_skipped_unrepairable() {
         &ports,
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
+        None,
         None,
     )
     .unwrap();
@@ -324,4 +328,104 @@ fn emit_report_json_prefix() {
     );
     let line = emit_report_json(&report).unwrap();
     assert!(line.starts_with("REPORT_JSON:{"));
+}
+
+#[test]
+fn registry_plugin_with_form_html_proposes_search_url() {
+    use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
+
+    let url = "https://m.example-form.com/";
+    let html = br#"<form action="/s.php"><input name="q"/></form>"#;
+    let source = sample_source(url);
+    let reg = AdapterRegistry::with_seed_families();
+    let plugin = RegistryRepairPlugin(&reg);
+    let repo = MemRepo::with_source(source.clone());
+    let verify = MemVerify::default();
+    let ledger = MemLedger::default();
+    let channel = IdleChannel;
+    let clock = FixedClock::default();
+    let ports = RepairPorts {
+        repo: &repo,
+        verify: &verify,
+        ledger: &ledger,
+        channel: &channel,
+        clock: &clock,
+    };
+    let ctx = RepairContext::builder(SourceKey::new(url), source)
+        .dry_run(true)
+        .no_verify(true)
+        .insert_html(Url::new(url).unwrap(), html.to_vec())
+        .build();
+    let gate = GateResult::new(Url::new(url).unwrap(), GateAction::Verify, "passed");
+    let out = run_repair_oneshot(
+        ctx,
+        &ports,
+        PlanOrPlugin::Plugin(&plugin),
+        GateInput::Injected(gate),
+        Some(&reg),
+        None,
+    )
+    .unwrap();
+    let apply = out.apply.expect("dry apply");
+    assert!(apply.dry_run);
+    assert_eq!(out.report.status, ReportStatus::Skipped);
+    assert!(out.report.message.contains("dry_run"));
+    assert_eq!(
+        out.report.family.as_ref().map(|f| f.as_str()),
+        Some(SiteFamily::GENERIC_FORM)
+    );
+    assert!(
+        out.report
+            .ops_summary
+            .as_ref()
+            .map(|ops| ops.iter().any(|o| o.contains("searchUrl")))
+            .unwrap_or(false),
+        "ops_summary={:?}",
+        out.report.ops_summary
+    );
+}
+
+#[test]
+fn registry_unknown_identify_without_html_is_unrepairable() {
+    use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
+
+    let url = "https://m.example-blank.com/";
+    let source = sample_source(url);
+    let reg = AdapterRegistry::with_seed_families();
+    let plugin = RegistryRepairPlugin(&reg);
+    let repo = MemRepo::with_source(source.clone());
+    let verify = MemVerify::default();
+    let ledger = MemLedger::default();
+    let channel = IdleChannel;
+    let clock = FixedClock::default();
+    let ports = RepairPorts {
+        repo: &repo,
+        verify: &verify,
+        ledger: &ledger,
+        channel: &channel,
+        clock: &clock,
+    };
+    let ctx = RepairContext::builder(SourceKey::new(url), source)
+        .dry_run(true)
+        .no_verify(true)
+        .build();
+    let gate = GateResult::new(Url::new(url).unwrap(), GateAction::Verify, "passed");
+    let out = run_repair_oneshot(
+        ctx,
+        &ports,
+        PlanOrPlugin::Plugin(&plugin),
+        GateInput::Injected(gate),
+        Some(&reg),
+        None,
+    )
+    .unwrap();
+    assert!(out.apply.is_none());
+    assert_eq!(out.report.status, ReportStatus::Skipped);
+    assert!(
+        out.report.message.contains("no repair plugin")
+            || out.report.message.contains("Unknown"),
+        "msg={}",
+        out.report.message
+    );
+    assert_eq!(*verify.calls.borrow(), 0);
 }

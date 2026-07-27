@@ -1,16 +1,17 @@
-//! Dry-run oneshot: gate → spine (mem ports + NoopRepairPlugin). No MCP writes.
+//! Dry-run oneshot: gate → AdapterRegistry → spine (mem ports). No MCP writes.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use chrono::{TimeZone, Utc};
 use serde_json::json;
+use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
 use source_gate::{classify_one_l0, load_rules};
 use source_spine::fakes::{FixedClock, IdleChannel, MemLedger, MemRepo, MemVerify};
 use source_spine::{
-    run_repair_oneshot, GateInput, NoopRepairPlugin, PlanOrPlugin, RepairPorts,
+    run_repair_oneshot, GateInput, PlanOrPlugin, RepairPorts,
 };
-use source_types::{BookSource, SourceKey};
+use source_types::{BookSource, SourceKey, Url};
 
 #[cfg(feature = "gate_full")]
 use source_gate::{classify_one, ClassifyOpts};
@@ -21,6 +22,8 @@ pub struct RepairDryArgs {
     pub l0_only: bool,
     pub tcp_timeout: f64,
     pub l2_timeout: f64,
+    /// Optional HTML file to seed identify/adapters (UTF-8).
+    pub html: Option<PathBuf>,
 }
 
 fn default_rules_path() -> PathBuf {
@@ -73,11 +76,26 @@ pub fn run_repair_dry(args: RepairDryArgs) -> ExitCode {
         "enabled": true,
     }));
 
-    let ctx = source_spine::RepairContext::builder(key, source)
+    let mut builder = source_spine::RepairContext::builder(key, source)
         .gate(gate.clone())
         .dry_run(true)
-        .no_verify(true)
-        .build();
+        .no_verify(true);
+    if let Some(html_path) = &args.html {
+        match std::fs::read(html_path) {
+            Ok(body) => match Url::new(args.url.trim()) {
+                Ok(u) => builder = builder.insert_html(u, body),
+                Err(e) => {
+                    eprintln!("repair-dry: bad url for html inject: {e}");
+                    return ExitCode::from(4);
+                }
+            },
+            Err(e) => {
+                eprintln!("repair-dry: read html {}: {e}", html_path.display());
+                return ExitCode::from(4);
+            }
+        }
+    }
+    let ctx = builder.build();
 
     let repo = MemRepo::with_source(ctx.source.clone());
     let verify = MemVerify::default();
@@ -91,12 +109,14 @@ pub fn run_repair_dry(args: RepairDryArgs) -> ExitCode {
         channel: &channel,
         clock: &clock,
     };
-    let plugin = NoopRepairPlugin;
+    let reg = AdapterRegistry::with_seed_families();
+    let plugin = RegistryRepairPlugin(&reg);
     let result = match run_repair_oneshot(
         ctx,
         &ports,
         PlanOrPlugin::Plugin(&plugin),
         GateInput::Injected(gate),
+        Some(&reg),
         None,
     ) {
         Ok(r) => r,

@@ -12,13 +12,22 @@ Oneshot: one deep attempt per user turn, then report (even if skip).
 You fix Legado book source(s). Follow Deep-fix checklist in
 legadoSkill/skills/legado-book-source-repair/SKILL.md.
 
+Prefer Rust for gate/smoke when available: crates/target/debug/source-cli.exe
+  gate --url URL | repair-dry --url URL [--html file]
+Live seed-adapter oneshot: repair --url URL [--dry-run] [--no-prefetch]
+Full deep-fix (diagnose→layer→branch) still Python until §12 cutover:
+  repair_diagnose.py / repair_deep_loop.py --mode oneshot
+
 0. Read config/mcp_defaults.json + book-source-repair-discipline.mdc
 1. cd E:/Projects/legadoSkill && python scripts/repair_source.py channel  # must idle
 2. DIAGNOSE FIRST (do not patch before this):
-   python scripts/repair_diagnose.py --url URL --key 我的
+   Prefer gate smoke: source-cli gate --url URL
+   Required for full deep-fix: python scripts/repair_diagnose.py --url URL --key 我的
    Use output.layer. If fake_detail=true → SEARCH (wmp8 trap), not toc.
    「搜索目录失效」is ambiguous — trust diagnose, not the Chinese alone.
 3. BRANCH:
+   - Full deep: python scripts/repair_deep_loop.py --mode oneshot --url URL
+   - Optional seed-adapter live: source-cli repair --url URL (not a diagnose substitute)
    - search: apply probe.best / ranked[0] (score>0), not raw forms[0]; use bookList_hint / bookUrl_hint
      (假首页搜索 / xunsearch pid traps — see skill)
    - toc: only if real detail_url; tocUrl + ruleToc from HTML

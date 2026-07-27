@@ -7,6 +7,7 @@ authors.workspace = true
 
 [dependencies]
 source_types = { workspace = true }
+source_ports = { workspace = true }
 source_patch = { workspace = true }
 source_identify = { workspace = true }
 source_pattern = { workspace = true }

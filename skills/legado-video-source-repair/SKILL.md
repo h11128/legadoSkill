@@ -22,12 +22,15 @@ M3U8 / magnet / drive links. Do not force novel TOC patches on them.
 ## Flow
 
 ```
-1. video_prefilter / L0 action=video → divert from novel repair_one
+1. Prefer: source-cli video-route --url URL  (or python scripts/video_prefilter.py)
+   L0 action=video → divert from novel repair_one
 2. get_source; confirm type 3|4; smell missing downloadUrls
 3. PC/phone: fix search bookUrl (must be detail) + downloadUrls / play list
 4. debug_source then `repair_debug_vs_check.py` if debug≠check; then start_check_sources
 5. `repair_session_log.py append` + log temp/full_fix/video_repair_*.json
 ```
+
+Python helpers still valid: `video_prefilter.py`, `video_repair_one.py`.
 
 ## Done criteria (video/file)
 

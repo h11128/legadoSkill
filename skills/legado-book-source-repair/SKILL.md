@@ -20,7 +20,9 @@ Track: `python scripts/repair_progress.py status --goal 100`.
 | MCP discover (auto) | `python scripts/mcp_discover.py` — also syncs `~/.cursor/mcp.json` |
 | Pipeline (layer) | `docs/repair-pipeline-design.md` |
 | Fix-agent prompt | `docs/FIX_AGENT_PROMPT.md` |
-| Future platform design (not operational yet) | `docs/repair-adapter-architecture.md` — only after full impl + func/perf parity vs current `scripts/` |
+| Platform (Rust) | `docs/repair-adapter-architecture.md` — **prefer `source-cli`**; Python `scripts/*.py` still OK until §12 cutover sign-off |
+
+**Entry preference:** Prefer `source-cli gate` / `repair-dry` for gate+adapter smoke. **Full deep-fix** (diagnose layer → branch → verify) still uses Python (`repair_diagnose` / `repair_deep_loop` / `repair_one`) until §12 cutover. `source-cli repair` is live MCP + seed adapters only — not a replace for the diagnose checklist yet.
 
 **Do not hard-code phone IPs in prompts or skill text.** Scripts call `ensure_session`,
 which rediscovers on connect failure and updates SOT. Agents must not ask the user to
@@ -51,8 +53,8 @@ That burned minutes and violated the 2–3 min budget. Pick → diagnose → pat
 
 | Mode | When | Command / agent behavior |
 |------|------|---------------------------|
-| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | checklist 或 `repair_deep_loop.py --mode oneshot --url URL` → 立刻汇报 |
-| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `repair_deep_loop.py --mode batch --urls-file … --limit N`；流式 `REPORT:`；勿整批 AwaitShell |
+| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | **全量深修仍以 Python diagnose→branch 为准**（`repair_diagnose` / `repair_deep_loop`）。Rust `source-cli repair` = gate + seed-adapter oneshot（非完整 layer 分支）；`repair-dry` 冒烟。§12 cutover 前勿跳过 diagnose |
+| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `repair_deep_loop.py --mode batch --urls-file … --limit N`（Python 仍为主批量入口）；流式 `REPORT:`；勿整批 AwaitShell |
 
 ## Deep-fix checklist (one URL)
 
@@ -81,6 +83,10 @@ Budget clock starts at **pick**. Diagnose+patch **2–3 min**; hard stop **5 min
 cd E:/Projects/legadoSkill
 python scripts/repair_source.py channel
 python scripts/repair_progress.py next
+# Prefer Rust oneshot when bin available:
+#   (cd crates && cargo build -p source_cli) && crates/target/debug/source-cli.exe repair --url URL
+# Gate smoke: source-cli gate --url URL   |   repair-dry --url URL [--html file]
+# Python equivalent (still valid):
 python scripts/repair_diagnose.py --url URL --key 我的
 # then patch + verify; or:
 python scripts/repair_deep_loop.py --mode oneshot --url URL
@@ -100,6 +106,10 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | 验证码搜索 | getcode / yzm / actyzm | **skip** |
 | 域名停车/过期 | L2 GET 正文含 for sale/出售/域名到期 / Redirecting shell | **disable/skip**（勿当搜索规则坏） |
 | **没有找到站点 (521danmei)** | title=`没有找到站点` / 空壳 | L2 `deadish:没有找到站点` → **skip** |
+| **nginx 空站 (cstxt)** | title=`Welcome to nginx!` | L2 `deadish:welcome to nginx` → **skip** |
+| **域名广告劫持 (pyzht)** | title=精选推荐 / `gg_card` / 18+广告壳 | L2 deadish 广告标记 → **skip** |
+| **Empire 搜索体 (fuxsb)** | debug 有书但 check「搜索失效」；`show=a,b,c` 体 | 简化 `keyboard={{key}}&show=title&tempid=1` + Referer；正文 `.co-by`→`.conbd` |
+| **webView 在 bookUrl** | `##$##,{'webView': true}` | `apply_safe_rule_fixes` 现修 ruleSearch.bookUrl（不仅 chapterUrl） |
 | 主机跳转 | bookSourceUrl host ≠ final host（如 .org→.com） | **migrate** 再修搜索 |
 | URL 前导空格 | `get_source` 失败但 list 能见到 | trim `bookSourceUrl` 再 get/migrate |
 | bookbenx 换域 | `.item` + `/search81.html?searchkey=`（新书迷楼→shukuai99） | 固定 searchUrl，勿依赖 ajax 抽 form |
@@ -137,21 +147,25 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | 卧龙 paper027 | https；`/api/v1/books/search?q=` + `$.data.data`；toc `/chapter/$id`；`.prose` |
 | PO18文学 po18f | `bookUrl=class.bookname@tag.a@href`；清空 tocUrl；`id.list-chapterAll@a`；校验成功 |
 | 吾爱耽美 52dmshu | 去 gbk charset；`#sitembox dl` + `dt a@href`；目录在详情 `#list dd a`；校验成功 |
+| 繁星四月 fuxsb | migrate https；Empire 搜索体简化+Referer；正文 `.conbd@html`；校验成功 |
 | 笔趣 96biquge | 登录壳非小说站 → skip |
 | 笔趣 bqgcn | diagnose=ok → verify |
 | 猫眼 / 123du / 古诗文 | skip (auth / captcha / WAF) |
 
-## Scripts
+## Scripts / CLI
 
-| Script | Role |
+| Entry | Role |
 |--------|------|
+| **`source-cli repair`** | Live oneshot: MCP get → AdapterRegistry → save/verify |
+| **`source-cli repair-dry`** | Mem ports + adapters; no MCP writes（冒烟） |
+| **`source-cli gate`** / `source_gate_rs.py` | L0(/L1/L2) classify |
 | `repair_wait.py` | Dynamic poll `finished/total`; page all results; harvest fail-fast timeout |
 | `repair_harvest.py` | Batch verify tagged fails (cheap wins) |
 | `repair_progress.py` | fixed/skip/remaining + next |
 | `repair_diagnose.py` | layer-first diagnose |
 | `repair_rule_smells.py` | webView quotes + empty-tocUrl tip |
 | `repair_debug_parse.py` | fake_detail logic |
-| `repair_deep_loop.py` | **oneshot / batch** 深修自动补丁 + 流式 REPORT |
+| `repair_deep_loop.py` | **oneshot / batch** 深修自动补丁 + 流式 REPORT（Python 路径） |
 | `repair_serial.py` | respondTime 队列串行 + `require_patch` + retro |
 | `repair_refresh_phone_index.py` | MCP list_sources → phone index（存在性 SOT） |
 | `repair_rt_queue.py` | phone index + RT 排序；搜索标签；1 host 1 源 |

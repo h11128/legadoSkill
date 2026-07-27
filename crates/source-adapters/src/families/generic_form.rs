@@ -5,9 +5,9 @@ use source_types::{
     PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use crate::context::RepairContext;
+use source_types::RepairContext;
 use crate::form::search_url_from_html;
-use crate::traits::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
 
 pub static GENERIC_FORM_RULES: &[FingerprintRule] = &[];
 
@@ -15,7 +15,9 @@ pub static GENERIC_FORM_RULES: &[FingerprintRule] = &[];
 pub fn generic_form_rules() -> Vec<FingerprintRule> {
     vec![FingerprintRule {
         id: "html:form".into(),
-        weight: 1.0,
+        // Weight ≥ identify_min_score (2.0) so a clear <form action> identifies GenericForm
+        // without silent unknown→GenericForm repair fallback.
+        weight: 2.0,
         match_kind: FingerprintMatchKind::HtmlRegex,
         pattern: r"(?i)<form[^>]+action".into(),
     }]

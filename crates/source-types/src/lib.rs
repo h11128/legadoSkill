@@ -1,6 +1,7 @@
 //! Core types for the legadoSkill repair platform (§3, §8.2, §14.6–14.7).
 
 mod config;
+mod context;
 mod enums;
 mod error;
 mod gate;
@@ -16,6 +17,7 @@ mod verify;
 pub const SCHEMA_VERSION: &str = "1";
 
 pub use config::RepairConfig;
+pub use context::{HtmlCache, RepairContext, RepairContextBuilder};
 pub use enums::{
     Capability, FingerprintMatchKind, GateAction, Layer, LedgerStep, MergeStrategy, Mode,
     OptimizeRisk, PatchOpKind, ReportStatus, SiteFamily,

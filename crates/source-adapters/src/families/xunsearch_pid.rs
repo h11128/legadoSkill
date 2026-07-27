@@ -5,8 +5,8 @@ use source_types::{
     OptimizePlan, PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use crate::context::RepairContext;
-use crate::traits::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
+use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
 
 pub static XUNSEARCH_PID_RULES: &[FingerprintRule] = &[];
 

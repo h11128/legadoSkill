@@ -1,34 +1,12 @@
-//! Family / repair plugin traits (§14.3) + identify stub + no-op plugin.
+//! No-op plugin + identify stub (real identify via IdentifyPort / adapters).
 
+use source_ports::{FamilyPlugin, OptimizePlugin, RepairPlugin};
 use source_types::{
     AdapterOutcome, Fingerprint, FingerprintRule, GateAction, IdentifyResult, OptimizePlan,
-    PatchPlan, SiteFamily, Unrepairable, Url, SCHEMA_VERSION,
+    PatchPlan, RepairContext, SiteFamily, Unrepairable, Url, SCHEMA_VERSION,
 };
 
-use crate::context::RepairContext;
-
-/// Minimal family identity for adapter registry (§14.3).
-pub trait FamilyPlugin {
-    fn family(&self) -> SiteFamily;
-    fn fingerprints(&self) -> &[FingerprintRule];
-}
-
-/// Propose a repair `PatchPlan` for a known (or generic) family.
-pub trait RepairPlugin: FamilyPlugin {
-    fn repair(&self, ctx: &RepairContext) -> AdapterOutcome<PatchPlan>;
-}
-
-/// Optional create path (not required for Phase C oneshot).
-pub trait CreatePlugin: FamilyPlugin {
-    fn create(&self, ctx: &RepairContext) -> AdapterOutcome<PatchPlan>;
-}
-
-/// Optional optimize path — `None` means no-op (not success verify).
-pub trait OptimizePlugin: FamilyPlugin {
-    fn optimize(&self, ctx: &RepairContext) -> Option<OptimizePlan>;
-}
-
-/// Identify stub when `source_identify` is not wired yet (§ Phase C).
+/// Identify stub when no `IdentifyPort` is injected.
 pub fn identify_stub(ctx: &RepairContext) -> IdentifyResult {
     let url = ctx
         .source_key
@@ -49,7 +27,7 @@ pub fn identify_stub(ctx: &RepairContext) -> IdentifyResult {
     }
 }
 
-/// No-op repair plugin — always `Unrepairable` so spine still compiles without adapters.
+/// No-op repair plugin — always `Unrepairable` (tests without adapters).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct NoopRepairPlugin;
 

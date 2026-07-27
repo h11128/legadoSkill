@@ -6,6 +6,7 @@ mod channel;
 mod clock;
 mod html_fetch;
 mod ledger;
+mod plugin;
 mod source_repo;
 mod verify;
 
@@ -13,6 +14,9 @@ pub use channel::{ChannelGuard, ChannelPort};
 pub use clock::Clock;
 pub use html_fetch::HtmlFetchPort;
 pub use ledger::LedgerPort;
+pub use plugin::{
+    CreatePlugin, FamilyPlugin, IdentifyPort, OptimizePlugin, RepairPlugin,
+};
 pub use source_repo::SourceRepository;
 pub use verify::VerifyPort;
 

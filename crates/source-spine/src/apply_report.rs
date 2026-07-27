@@ -6,7 +6,7 @@ use source_types::{
 
 use crate::apply_ops::ops_summary;
 use crate::outcome::ApplyOutcome;
-use crate::context::RepairContext;
+use source_types::RepairContext;
 use crate::error::SpineError;
 use crate::report_emit::emit_report_json;
 

@@ -16,10 +16,14 @@ gate_full = ["source_gate/l1", "source_gate/l2"]
 clap = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
+ureq = { workspace = true }
 source_cache = { workspace = true }
 source_probe = { workspace = true }
 source_patch = { workspace = true }
 source_gate = { workspace = true }
 source_video = { workspace = true }
 source_types = { workspace = true }
+source_ports = { workspace = true }
 source_spine = { workspace = true }
+source_adapters = { workspace = true }
+source_mcp = { workspace = true }

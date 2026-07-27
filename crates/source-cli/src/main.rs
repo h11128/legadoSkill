@@ -1,7 +1,7 @@
 mod cmds;
 
 use clap::{Parser, Subcommand};
-use cmds::{GateArgs, RepairDryArgs};
+use cmds::{GateArgs, RepairArgs, RepairDryArgs};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -32,7 +32,7 @@ enum Cmd {
         #[arg(long, default_value_t = 4.0)]
         l2_timeout: f64,
     },
-    /// Spine dry-run oneshot (mem ports + noop plugin; no MCP writes)
+    /// Spine dry-run oneshot (mem ports + AdapterRegistry; no MCP writes)
     RepairDry {
         #[arg(long)]
         url: String,
@@ -44,6 +44,32 @@ enum Cmd {
         tcp_timeout: f64,
         #[arg(long, default_value_t = 4.0)]
         l2_timeout: f64,
+        /// Prefetch HTML file for identify/adapters
+        #[arg(long)]
+        html: Option<PathBuf>,
+    },
+    /// Live oneshot: MCP get → adapters → save/verify (unless --dry-run / --no-verify)
+    Repair {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        l0_only: bool,
+        #[arg(long, default_value_t = 1.5)]
+        tcp_timeout: f64,
+        #[arg(long, default_value_t = 4.0)]
+        l2_timeout: f64,
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+        #[arg(long, default_value_t = false)]
+        no_verify: bool,
+        /// HTML file instead of network prefetch
+        #[arg(long)]
+        html: Option<PathBuf>,
+        /// Skip network prefetch of bookSourceUrl (identify may stay Unknown)
+        #[arg(long, default_value_t = false)]
+        no_prefetch: bool,
     },
     /// Pure EWMA math (parity helper)
     Ewma {
@@ -94,12 +120,35 @@ fn main() -> ExitCode {
             l0_only,
             tcp_timeout,
             l2_timeout,
+            html,
         } => cmds::run_repair_dry(RepairDryArgs {
             url,
             rules,
             l0_only,
             tcp_timeout,
             l2_timeout,
+            html,
+        }),
+        Cmd::Repair {
+            url,
+            rules,
+            l0_only,
+            tcp_timeout,
+            l2_timeout,
+            dry_run,
+            no_verify,
+            html,
+            no_prefetch,
+        } => cmds::run_repair(RepairArgs {
+            url,
+            rules,
+            l0_only,
+            tcp_timeout,
+            l2_timeout,
+            dry_run,
+            no_verify,
+            html,
+            prefetch: !no_prefetch,
         }),
         Cmd::Ewma { prev, suggested } => cmds::run_ewma(prev, suggested),
         Cmd::ProbeScore {

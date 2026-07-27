@@ -1,17 +1,19 @@
-//! Oneshot orchestration: Gate → Identify(stub) → propose → Apply → Verify → Ledger.
+//! Oneshot orchestration: Gate → Identify → propose → Apply → Verify → Ledger.
 
-use source_ports::{ChannelPort, Clock, LedgerPort, SourceRepository, VerifyPort};
-use source_types::{
-    AdapterOutcome, Capability, ErrorKind, GateAction, GateResult, LedgerRow, LedgerStep, PatchPlan,
-    PortError, ReportJson, ReportStatus,
+use source_ports::{
+    ChannelPort, Clock, IdentifyPort, LedgerPort, RepairPlugin, SourceRepository, VerifyPort,
 };
+use source_types::{AdapterOutcome, GateAction, GateResult, PatchPlan, PortError, RepairContext};
 
 use crate::apply::ApplyService;
-use crate::outcome::{ApplyOutcome, IdempotencyStore};
-use crate::context::RepairContext;
 use crate::error::SpineError;
-use crate::plugin::{identify_stub, RepairPlugin};
-use crate::report_emit::emit_report_json;
+use crate::oneshot_gate::{
+    channel_busy_result, ledger_gate, migrated_gate, need_more_html_result, skipped_gate,
+    unrepairable_result,
+};
+use crate::outcome::{ApplyOutcome, IdempotencyStore};
+use crate::plugin::identify_stub;
+use source_types::ReportJson;
 
 /// Injected gate result or callable classifier.
 pub enum GateInput<'a> {
@@ -58,12 +60,15 @@ pub struct OneshotResult {
     pub gate: GateResult,
 }
 
-/// Gate → Identify(stub) → propose → Apply → Verify → Ledger (§4.1 / §14.5).
+/// Gate → Identify → propose → Apply → Verify → Ledger (§4.1 / §14.5).
+///
+/// When `identify` is `None`, uses [`crate::plugin::identify_stub`] (unknown family).
 pub fn run_repair_oneshot<R, V, L, C, K>(
     mut ctx: RepairContext,
     ports: &RepairPorts<'_, R, V, L, C, K>,
     plan_or_adapter: PlanOrPlugin<'_>,
     gate_input: GateInput<'_>,
+    identify: Option<&dyn IdentifyPort>,
     idem: Option<&mut dyn IdempotencyStore>,
 ) -> Result<OneshotResult, SpineError>
 where
@@ -73,7 +78,6 @@ where
     C: ChannelPort,
     K: Clock,
 {
-    // Channel busy → no MCP; REPORT failed `channel_busy` (§14.5).
     if let Err(e) = ports.channel.assert_idle_for_repair() {
         return channel_busy_result(&ctx, e);
     }
@@ -99,8 +103,17 @@ where
         return skipped_gate(&ctx, gate);
     }
 
-    // Identify stub (real identify lands when source_identify is ready).
-    let identified = identify_stub(&ctx);
+    let identified = match identify {
+        Some(port) => {
+            let url = ctx
+                .source_key
+                .to_url()
+                .map_err(|e| PortError::ContractViolation(e.to_string()))?;
+            let html = ctx.html_text();
+            port.identify(url, &ctx.source, &html, &ctx.config)
+        }
+        None => identify_stub(&ctx),
+    };
     ctx.family = identified.family.clone();
 
     let plan = match plan_or_adapter {
@@ -111,7 +124,7 @@ where
                 return unrepairable_result(&ctx, gate, u.reason);
             }
             AdapterOutcome::NeedMoreHtml(n) => {
-                return Err(SpineError::NeedMoreHtml(n.why));
+                return need_more_html_result(&ctx, gate, n.why);
             }
         },
     };
@@ -133,143 +146,4 @@ where
         apply: Some(outcome),
         gate,
     })
-}
-
-fn channel_busy_result(
-    ctx: &RepairContext,
-    err: PortError,
-) -> Result<OneshotResult, SpineError> {
-    let url = ctx
-        .source_key
-        .to_url()
-        .map_err(|e| PortError::ContractViolation(e.to_string()))?;
-    let mut report = ReportJson::new(
-        ctx.capability,
-        ctx.mode,
-        url,
-        ReportStatus::Failed,
-        format!("channel_busy: {err}"),
-    );
-    report.family = Some(ctx.family.clone());
-    let report_line = emit_report_json(&report)?;
-    let gate = ctx.gate.clone().unwrap_or_else(|| {
-        GateResult::new(report.url.clone(), GateAction::Skip, "channel_busy")
-    });
-    Ok(OneshotResult {
-        report,
-        report_line,
-        exit_code: ErrorKind::ChannelBusy.exit_code(),
-        apply: None,
-        gate,
-    })
-}
-
-fn skipped_gate(ctx: &RepairContext, gate: GateResult) -> Result<OneshotResult, SpineError> {
-    let (status, capability) = if gate.action == GateAction::Disable {
-        (ReportStatus::Disabled, Capability::Disable)
-    } else {
-        (ReportStatus::Skipped, ctx.capability)
-    };
-    let mut report = ReportJson::new(
-        capability,
-        ctx.mode,
-        gate.url.clone(),
-        status,
-        format!("gate {}: {}", gate.action.as_str(), gate.reason),
-    );
-    report.family = Some(ctx.family.clone());
-    let report_line = emit_report_json(&report)?;
-    // Permanent skip → exit 0 (expected skip) per §14.6 soft reading.
-    Ok(OneshotResult {
-        report,
-        report_line,
-        exit_code: 0,
-        apply: None,
-        gate,
-    })
-}
-
-fn migrated_gate(ctx: &RepairContext, gate: GateResult) -> Result<OneshotResult, SpineError> {
-    let migrate_to = gate
-        .migrate_to
-        .as_ref()
-        .map(|m| match m {
-            source_types::MigrateTarget::Url(u) => u.as_str().to_string(),
-            source_types::MigrateTarget::Host(h) => h.as_str().to_string(),
-        });
-    let msg = match &migrate_to {
-        Some(to) => format!("gate migrate: {} → {to}", gate.reason),
-        None => format!("gate migrate: {} (missing migrate_to)", gate.reason),
-    };
-    let mut report = ReportJson::new(
-        Capability::Migrate,
-        ctx.mode,
-        gate.url.clone(),
-        ReportStatus::Migrated,
-        msg,
-    );
-    report.family = Some(ctx.family.clone());
-    report.migrate_to = migrate_to;
-    let report_line = emit_report_json(&report)?;
-    Ok(OneshotResult {
-        report,
-        report_line,
-        exit_code: 0,
-        apply: None,
-        gate,
-    })
-}
-
-fn unrepairable_result(
-    ctx: &RepairContext,
-    gate: GateResult,
-    reason: impl Into<String>,
-) -> Result<OneshotResult, SpineError> {
-    let reason = reason.into();
-    let mut report = ReportJson::new(
-        ctx.capability,
-        ctx.mode,
-        gate.url.clone(),
-        ReportStatus::Skipped,
-        reason,
-    );
-    report.family = Some(ctx.family.clone());
-    let report_line = emit_report_json(&report)?;
-    Ok(OneshotResult {
-        report,
-        report_line,
-        exit_code: 0,
-        apply: None,
-        gate,
-    })
-}
-
-fn ledger_gate<L: LedgerPort, K: Clock>(
-    ledger: &L,
-    clock: &K,
-    ctx: &RepairContext,
-    gate: &GateResult,
-) -> Result<(), SpineError> {
-    let ts = clock.now_utc().to_rfc3339();
-    let mut row = LedgerRow::new(
-        ts,
-        gate.url.clone(),
-        LedgerStep::Gate,
-        gate.action.as_str(),
-    );
-    row.note = Some(gate.reason.clone());
-    row.capability = Some(ctx.capability);
-    row.family = Some(ctx.family.clone());
-    row.report_status = Some(match gate.action {
-        GateAction::Skip | GateAction::Video | GateAction::Hunt => ReportStatus::Skipped,
-        GateAction::Disable => ReportStatus::Disabled,
-        GateAction::Migrate => ReportStatus::Migrated,
-        GateAction::Verify => ReportStatus::Fixed, // placeholder until apply; overwritten later
-    });
-    // Avoid implying fixed at gate-verify: use None for verify-pass gate rows.
-    if gate.action == GateAction::Verify {
-        row.report_status = None;
-    }
-    ledger.append(&row)?;
-    Ok(())
 }

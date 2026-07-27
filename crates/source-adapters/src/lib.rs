@@ -1,15 +1,14 @@
 //! Family adapters (ISP) + create/optimize/merge pure helpers (§14.3 / §11.4–11.5).
 
-mod context;
+mod as_plugin;
 mod create;
 mod families;
 mod form;
 mod merge;
 mod optimize;
 mod registry;
-mod traits;
 
-pub use context::RepairContext;
+pub use as_plugin::RegistryRepairPlugin;
 pub use create::create_via_registry;
 pub use families::{
     FictionListXchina, GenericForm, JieqiMobile, XunsearchPid, FICTION_LIST_XCHINA_RULES,
@@ -20,4 +19,5 @@ pub use merge::{
 };
 pub use optimize::{optimize_smells_plan, OptimizeSmellInput};
 pub use registry::AdapterRegistry;
-pub use traits::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+pub use source_ports::{CreatePlugin, FamilyPlugin, IdentifyPort, OptimizePlugin, RepairPlugin};
+pub use source_types::{HtmlCache, RepairContext, RepairContextBuilder};

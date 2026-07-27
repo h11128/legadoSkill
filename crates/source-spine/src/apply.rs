@@ -10,7 +10,7 @@ use crate::apply_ops::{apply_ops_to_source, ops_summary};
 use crate::apply_report::{
     dry_run_outcome, fail_report, report_validate_failure, short_circuit_fixed,
 };
-use crate::context::RepairContext;
+use source_types::RepairContext;
 use crate::error::SpineError;
 use crate::idempotency::idempotency_key;
 use crate::outcome::{ApplyOutcome, IdempotencyStore};
