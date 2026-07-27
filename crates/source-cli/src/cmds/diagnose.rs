@@ -1,5 +1,6 @@
 //! Offline + MCP diagnose CLI.
 
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -9,7 +10,10 @@ use source_diagnose::{diagnose_from_debug, diagnose_gate_skip, gate_blocks_diagn
 use source_gate::{classify_one_l0, load_rules};
 use source_mcp::{McpClient, McpEndpoint, McpSourceRepository};
 use source_ports::SourceRepository;
-use source_types::{SourceKey, Url};
+use source_probe::probe_search_live;
+use source_types::{Layer, SourceKey, Url};
+
+use super::diagnose_tips::{enrich_with_live_probe, layer_tips};
 
 #[cfg(feature = "gate_full")]
 use source_gate::{classify_one, ClassifyOpts};
@@ -37,6 +41,30 @@ fn default_rules_path() -> PathBuf {
         }
     }
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/verify_skip_rules.json")
+}
+
+fn fetch_text(url: &str) -> Option<(u16, String)> {
+    let resp = ureq::get(url).call().ok()?;
+    let status = resp.status();
+    let mut buf = Vec::new();
+    resp.into_reader().read_to_end(&mut buf).ok()?;
+    let text = String::from_utf8_lossy(&buf).into_owned();
+    Some((status, text))
+}
+
+fn attach_probe_tips(diag: &mut source_types::DiagnoseResult, key: &str) {
+    diag.tips = layer_tips(diag);
+    if diag.layer != Layer::Search && diag.fake_detail != Some(true) {
+        return;
+    }
+    let base = diag.url.as_str().trim_end_matches('/').to_string() + "/";
+    let Some((_, home)) = fetch_text(base.trim_end_matches('/')) else {
+        diag.tips
+            .push("probe: home fetch failed — tips are layer-only".into());
+        return;
+    };
+    let live = probe_search_live(&home, &base, key, &fetch_text, 8);
+    enrich_with_live_probe(diag, &live);
 }
 
 pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
@@ -75,7 +103,8 @@ pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
     };
 
     if gate_blocks_diagnose(&gate) {
-        let d = diagnose_gate_skip(url, gate);
+        let mut d = diagnose_gate_skip(url, gate);
+        d.tips = layer_tips(&d);
         let v = serde_json::to_value(&d).unwrap_or_default();
         let _ = validate_diagnose(&v);
         println!("{}", serde_json::to_string_pretty(&d).unwrap_or_default());
@@ -118,7 +147,8 @@ pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
         raw
     };
 
-    let d = diagnose_from_debug(url, &debug_text, Some(gate), None);
+    let mut d = diagnose_from_debug(url, &debug_text, Some(gate), None);
+    attach_probe_tips(&mut d, &args.key);
     let v = serde_json::to_value(&d).unwrap_or_default();
     if let Err(e) = validate_diagnose(&v) {
         eprintln!("diagnose: contract: {e}");

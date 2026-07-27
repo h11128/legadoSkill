@@ -160,7 +160,7 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
         };
         return Some(SearchCandidate {
             search_url: su,
-            from: "html".into(),
+            from: cand_from(f),
         });
     }
 
@@ -183,7 +183,7 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
         }
         return Some(SearchCandidate {
             search_url: format!("{rel},{{\n  \"method\": \"POST\",\n  \"body\": \"{body}\"\n}}"),
-            from: "html".into(),
+            from: cand_from(f),
         });
     }
 
@@ -198,8 +198,16 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
     let sep = if rel.contains('?') { "&" } else { "?" };
     Some(SearchCandidate {
         search_url: format!("{rel}{sep}{field}={{{{key}}}}{extra}"),
-        from: "html".into(),
+        from: cand_from(f),
     })
+}
+
+fn cand_from(f: &ProbeForm) -> String {
+    if f.fields.contains("from_js") {
+        "js".into()
+    } else {
+        "html".into()
+    }
 }
 
 #[cfg(test)]

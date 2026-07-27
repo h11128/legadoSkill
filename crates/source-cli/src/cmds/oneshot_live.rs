@@ -13,7 +13,6 @@ use source_gate::{classify_one_l0, load_rules};
 use source_mcp::{
     FsChannelPort, JsonlLedgerPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort,
 };
-use source_patch::{apply_auto_patches, apply_safe_rule_fixes};
 use source_ports::{ChannelPort, Clock, DiagnosePort, HtmlFetchPort, SourceRepository};
 use source_spine::{
     run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts,
@@ -150,8 +149,10 @@ pub fn repair_one_url(
             return ExitCode::from(2);
         }
     };
-    let _smell_changes = apply_safe_rule_fixes(&mut source);
-    let _auto_changes = apply_auto_patches(&mut source);
+    let prep_notes = super::oneshot_prep::prep_source_before_repair(&mut source, &repo, dry_run);
+    if !prep_notes.is_empty() {
+        eprintln!("repair: prep {}", prep_notes.join(","));
+    }
     let source_for_diag = source.clone();
 
     let debug_text = if skip_diagnose {

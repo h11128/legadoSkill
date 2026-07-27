@@ -140,6 +140,9 @@ pub struct DiagnoseResult {
     pub gate: Option<GateResult>,
     #[serde(default)]
     pub evidence: DiagnoseEvidence,
+    /// Human repair tips (probe best / traps). Empty omitted in JSON.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tips: Vec<String>,
 }
 
 impl DiagnoseResult {
@@ -153,6 +156,7 @@ impl DiagnoseResult {
             reclassified_from: None,
             gate: None,
             evidence: DiagnoseEvidence::default(),
+            tips: Vec::new(),
         }
     }
 }

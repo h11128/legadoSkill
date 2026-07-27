@@ -41,6 +41,7 @@ pub fn diagnose_from_debug(
         reclassified_from,
         gate,
         evidence: evidence_from_parse(&parsed),
+        tips: Vec::new(),
     };
     if result.fake_detail == Some(true) {
         result.layer = Layer::Search;

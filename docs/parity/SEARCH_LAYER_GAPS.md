@@ -13,8 +13,10 @@ Status owner: update when closing a row. P0 blocks thorough §12 functional sign
 | S7 | P1 | JS `data-api` search shell | `detect_js_search_api` | `js_api.rs` + search_plan | done (basic) |
 | S8 | P1 | Fake-home penalty needs home_html | score_search_html | `score_search_html_with_home` | done |
 | S9 | P1 | `apply_auto_patches` after probe | deep_loop | oneshot_live | done |
-| S10 | P1 | diagnose embeds live probe tips | repair_diagnose | diagnose.rs | todo |
-| S11 | P2 | forms_from_js | repair_search_probe | forms.rs | todo |
-| S12 | P2 | scheme-less URL normalize | deep_loop | oneshot_live | todo |
+| S10 | P1 | diagnose embeds live probe tips | repair_diagnose | `diagnose.rs` + `diagnose_tips` + `DiagnoseResult.tips` | done |
+| S11 | P2 | forms_from_js | repair_search_probe | `forms_js.rs` + live script fetch | done |
+| S12 | P2 | scheme-less URL normalize | deep_loop | `source_patch::scheme` + oneshot_prep | done |
 
 Acceptance: `docs/parity/THOROUGH_ACCEPTANCE.md`.
+
+Last closed: S10–S12 (2026-07-27). Tracker empty of open search-layer rows. Thorough §12 functional signed in `ACCEPTANCE_LOG.md` (biduju search + content E2E).

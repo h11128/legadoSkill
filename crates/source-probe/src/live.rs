@@ -1,10 +1,12 @@
 //! Live search probe: fetch each candidate, score HTML, detect dead form endpoints.
 
-use crate::forms::SearchCandidate;
+use crate::forms::{forms_from_html, ProbeForm, SearchCandidate};
+use crate::forms_js::{forms_from_js, searchish_script_srcs};
 use crate::hints::{html_needs_gbk, materialize_search_url};
 use crate::rank::{form_endpoints_dead, pick_best, rank_with_html, ProbeBest, RankedCandidate};
-use crate::{probe_search, ProbeResult};
+use crate::{dedupe_forms, probe_search_from_forms, ProbeResult};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LiveProbeResult {
@@ -23,7 +25,7 @@ fn absolutize(template: &str, base: &str) -> String {
     if t.starts_with("http://") || t.starts_with("https://") {
         return t.to_string();
     }
-    if let Ok(u) = url::Url::parse(base.trim_end_matches('/')) {
+    if let Ok(u) = Url::parse(base.trim_end_matches('/')) {
         if t.starts_with('/') {
             return format!("{}://{}{}", u.scheme(), u.host_str().unwrap_or(""), t);
         }
@@ -35,7 +37,20 @@ fn is_post_template(su: &str) -> bool {
     su.contains("\"method\"") && su.to_ascii_lowercase().contains("post")
 }
 
-/// Live-rank up to `max_fetch` candidates (forms first).
+fn collect_forms(home_html: &str, base_url: &str, fetch: &FetchFn<'_>) -> Vec<ProbeForm> {
+    let mut forms = forms_from_html(home_html, base_url);
+    forms.extend(forms_from_js(home_html, base_url));
+    for src in searchish_script_srcs(home_html) {
+        let abs = absolutize(&src, base_url);
+        if let Some((_, js)) = fetch(&abs) {
+            forms.extend(forms_from_js(&js, base_url));
+        }
+    }
+    dedupe_forms(&mut forms);
+    forms
+}
+
+/// Live-rank up to `max_fetch` candidates (forms first). Fetches searchish JS shells.
 pub fn probe_search_live(
     home_html: &str,
     base_url: &str,
@@ -43,11 +58,11 @@ pub fn probe_search_live(
     fetch: &FetchFn<'_>,
     max_fetch: usize,
 ) -> LiveProbeResult {
-    let offline = probe_search(home_html, base_url, keyword);
+    let forms = collect_forms(home_html, base_url, fetch);
+    let offline = probe_search_from_forms(forms, keyword);
     let gbk = html_needs_gbk(home_html);
     let mut pages: Vec<(String, String, u16)> = Vec::new();
 
-    // Prefer form candidates for fetch order
     let mut ordered: Vec<&SearchCandidate> = offline
         .candidates
         .iter()
@@ -62,14 +77,12 @@ pub fn probe_search_live(
 
     for c in ordered.into_iter().take(max_fetch.max(1)) {
         if is_post_template(&c.search_url) {
-            // POST body templates: skip live GET; leave offline score
             continue;
         }
         let abs = absolutize(&c.search_url, base_url);
         let fetch_url = materialize_search_url(&abs, keyword, gbk);
         match fetch(&fetch_url) {
             Some((status, body)) => pages.push((c.search_url.clone(), body, status)),
-            // Fetch failed (TLS/CF/reset): treat as dead page so offline path score cannot win.
             None => pages.push((c.search_url.clone(), String::new(), 599)),
         }
     }
@@ -111,5 +124,30 @@ mod tests {
         let best = live.best.expect("best");
         assert!(best.search_url.contains("keyword"));
         assert!(best.score > 0);
+    }
+
+    #[test]
+    fn live_merges_js_script_form() {
+        let home = r#"<script src="/js/top.js"></script>"#;
+        let fetch = |url: &str| {
+            if url.contains("top.js") {
+                Some((
+                    200u16,
+                    r#"document.writeln("<form action='/modules/article/search.php' method='post'>");"#
+                        .into(),
+                ))
+            } else {
+                None
+            }
+        };
+        let live = probe_search_live(home, "https://m.ex.com/", "我的", &fetch, 4);
+        assert!(
+            live.offline
+                .forms
+                .iter()
+                .any(|f| f.action.contains("search.php")),
+            "forms={:?}",
+            live.offline.forms
+        );
     }
 }

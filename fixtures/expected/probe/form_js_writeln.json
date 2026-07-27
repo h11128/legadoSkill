@@ -1,0 +1,6 @@
+{
+  "html": "<html><head></head><body><script>document.writeln(\"<form action='/modules/article/search.php' method='post'><input name='searchkey'></form>\");</script></body></html>",
+  "base_url": "https://m.example.com/",
+  "expected_best_contains": ["search.php", "searchkey"],
+  "forbidden_best_contains": []
+}

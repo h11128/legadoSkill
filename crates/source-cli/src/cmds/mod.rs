@@ -1,12 +1,14 @@
 //! CLI subcommands for source-cli.
 
 mod diagnose;
+mod diagnose_tips;
 mod ewma;
 mod gate;
 mod hunt;
 mod ledger_cmd;
 mod migrate;
 mod oneshot_live;
+mod oneshot_prep;
 mod probe;
 mod probe_score;
 mod progress;

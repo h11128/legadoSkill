@@ -29,6 +29,10 @@
         "toc_url": { "type": "string" },
         "debug_snippet": { "type": "string" }
       }
+    },
+    "tips": {
+      "type": "array",
+      "items": { "type": "string" }
     }
   },
   "allOf": [

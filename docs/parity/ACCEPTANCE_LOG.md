@@ -4,7 +4,8 @@ Record sign-off only when **thorough** gates pass (`docs/parity/THOROUGH_ACCEPTA
 
 | date (UTC) | git sha | suites | operator | notes |
 |------------|---------|--------|----------|-------|
-| 2026-07-27 | _(wip)_ | search-parity + rust-cli expanding | agent | **Retracted soft §12 functional green.** Gap: live rank / score / dead-endpoint / JS API were incomplete. Hard gate: search-layer E2E + `THOROUGH_ACCEPTANCE.md`. Biduju later fixed via Rust live path (`keyword`+GBK+table) — evidence only, not full parity close. |
+| 2026-07-27 | _(pending commit)_ | 7/7 incl. search-parity | agent | **Thorough §12 functional (口径 A) green.** SEARCH_LAYER_GAPS S1–S12 all `done`. Suites + golden forms OK. Live E2E: biduju search-layer (`keyword`+GBK+`class.list@table`) then content `class.chapter@html` (textNodes empty) → device **校验成功**. S10 tips verified via `--debug-file` fake_detail + live probe. |
+| 2026-07-27 | _(wip)_ | search-parity + rust-cli expanding | agent | **Retracted soft §12 functional green.** Gap: live rank / score / dead-endpoint / JS API were incomplete. Hard gate: search-layer E2E + `THOROUGH_ACCEPTANCE.md`. |
 | 2026-07-27 | `87a431e` | 6/6 soft suites | agent | **SUPERSEDED** — CLI/shim inventory only; insufficient for thorough functional parity. |
 | 2026-07-27 | e4d5d20 | 5/5 | agent | Phase A harness |
 
@@ -12,11 +13,20 @@ Record sign-off only when **thorough** gates pass (`docs/parity/THOROUGH_ACCEPTA
 
 See `THOROUGH_ACCEPTANCE.md`. Forbidden: claim green with only `layer=ok` smoke.
 
-## Evidence (partial)
+## Evidence
 
 ```
+# Search-layer (earlier in same track)
 source-cli repair --url http://www.biduju.net
-→ keyword+GBK+class.list@table → 校验成功 (after forms.rs field fix)
+→ keyword + GBK + class.list@table → 校验成功
+
+# Content regression catch (2026-07-27)
+debug: ContentEmptyException with class.chapter@textNodes
+patch: ruleContent.content = class.chapter@html
+start_check_sources → 校验成功 (2159ms)
+
+# S10 diagnose tips (debug-file fake_detail + live probe)
+tips include fake_detail trap + probe.best score=7 + GBK
 ```
 
-Gap backlog: `SEARCH_LAYER_GAPS.md`.
+Gap backlog: `SEARCH_LAYER_GAPS.md` (no open search-layer rows).
