@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "capability": "repair",
+  "mode": "oneshot",
+  "url": "https://www.example-novel.com",
+  "status": "fixed",
+  "message": "fake fixed — no verify object"
+}

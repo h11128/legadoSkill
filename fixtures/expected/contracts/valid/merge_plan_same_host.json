@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "strategy": "same_host",
+  "survivors": ["https://www.example-novel.com"],
+  "drop": ["https://www.example-novel.com/mirror"],
+  "canonical": {
+    "bookSourceUrl": "https://www.example-novel.com",
+    "bookSourceName": "Example"
+  },
+  "score_breakdown": {
+    "https://www.example-novel.com": {
+      "enabled": true,
+      "last_verify_ok": true,
+      "respond_time_ms": 400,
+      "rule_completeness": 0.9,
+      "total": 3.2
+    }
+  }
+}

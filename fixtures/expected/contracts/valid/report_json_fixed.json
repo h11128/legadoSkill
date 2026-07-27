@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "capability": "repair",
+  "mode": "oneshot",
+  "url": "https://www.example-novel.com",
+  "status": "fixed",
+  "family": "XunsearchPid",
+  "message": "search + toc patched; device verify ok",
+  "layer": "search",
+  "duration_ms": 1820,
+  "ops_summary": ["set searchUrl", "set ruleSearch.bookList"],
+  "verify": {
+    "schema_version": "1",
+    "url": "https://www.example-novel.com",
+    "success": true,
+    "message": "check ok",
+    "mode": "oneshot",
+    "check_discovery": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "before": {
+    "bookSourceUrl": "https://www.example-novel.com",
+    "concurrentRate": "0"
+  },
+  "after": {
+    "bookSourceUrl": "https://www.example-novel.com",
+    "concurrentRate": "8"
+  },
+  "changes": [
+    {
+      "op": "set",
+      "path": "concurrentRate",
+      "value": "8"
+    }
+  ],
+  "risk": "low"
+}

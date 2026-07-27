@@ -1,0 +1,19 @@
+{
+  "comment": "L0 verify-skip / disable rules (script-side). Match against bookSourceUrl (case-insensitive).",
+  "rules": [
+    {"id": "qidian", "pattern": "qidian\\.com", "action": "skip", "reason": "waf_official"},
+    {"id": "jjwxc", "pattern": "jjwxc\\.net", "action": "skip", "reason": "api_signature"},
+    {"id": "qq_read", "pattern": "book\\.qq\\.com", "action": "skip", "reason": "official_login_wall"},
+    {"id": "trxs", "pattern": "trxs\\.(me|cc)", "action": "skip", "reason": "anti_bot"},
+    {"id": "taopian", "pattern": "taopianzy\\.com", "action": "video", "reason": "non_book_video"},
+    {"id": "uku", "pattern": "ukuzy\\.com", "action": "video", "reason": "non_book_video"},
+    {"id": "ifun", "pattern": "ifun\\.cool", "action": "disable", "reason": "non_book"},
+    {"id": "uaa", "pattern": "ilikeuaa\\.|starseatech", "action": "disable", "reason": "non_book_dashboard"},
+    {"id": "tiexue", "pattern": "tiexue\\.net", "action": "disable", "reason": "dead_site_shutdown_confirmed"},
+    {"id": "9yread", "pattern": "9yread\\.com", "action": "disable", "reason": "dead_api"},
+    {"id": "maoyan", "pattern": "lfdapengu\\.com|lemiyigou\\.com", "action": "disable", "reason": "dead_api"},
+    {"id": "lmeee", "pattern": "lmeee\\.com", "action": "disable", "reason": "repurposed"},
+    {"id": "wangshu", "pattern": "wangshugu\\.", "action": "disable", "reason": "hijacked_or_dead"},
+    {"id": "timeout_cluster", "pattern": "dddw\\.net|aikushuge\\.com|yunxs\\.info|yingsx\\.com|s4yd\\.com", "action": "hunt", "reason": "historically_timeout_try_domain_hunt"}
+  ]
+}

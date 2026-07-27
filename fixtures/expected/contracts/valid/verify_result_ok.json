@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "url": "https://www.example-novel.com",
+  "success": true,
+  "message": "搜索成功; 目录成功; 正文成功",
+  "mode": "oneshot",
+  "check_discovery": false,
+  "duration_ms": 2500
+}

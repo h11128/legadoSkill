@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "url": "https://www.example-novel.com",
+  "verify": true,
+  "action": "verify",
+  "reason": "passed_l0_l1_l2",
+  "l1": { "ok": true, "latency_ms": 120 },
+  "l2": { "ok": true, "status": 200, "bytes": 4096 }
+}

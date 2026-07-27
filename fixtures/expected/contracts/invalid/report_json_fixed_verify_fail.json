@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "capability": "repair",
+  "mode": "oneshot",
+  "url": "https://www.example-novel.com",
+  "status": "fixed",
+  "message": "fake fixed — verify.success false",
+  "verify": {
+    "success": false,
+    "message": "搜索失效"
+  }
+}

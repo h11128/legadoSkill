@@ -1,0 +1,18 @@
+[package]
+name = "source_adapters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+source_types = { workspace = true }
+source_patch = { workspace = true }
+source_identify = { workspace = true }
+source_pattern = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

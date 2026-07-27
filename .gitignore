@@ -21,3 +21,9 @@ backups/
 Thumbs.db
 Desktop.ini
 .DS_Store
+# Rust
+/crates/target/
+/target/
+# Commit workspace lock for reproducible CLI builds; ignore accidental nested locks.
+**/Cargo.lock
+!/crates/Cargo.lock

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "url": "https://www.example-novel.com",
+  "layer": "search",
+  "fail_msg": "搜索失效",
+  "fake_detail": false,
+  "evidence": {
+    "search_url": "https://www.example-novel.com/search.php?q=key",
+    "debug_snippet": "no bookList hits"
+  }
+}

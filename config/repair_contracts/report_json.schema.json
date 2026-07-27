@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/report_json.schema.json",
+  "title": "ReportJson",
+  "description": "Streaming REPORT_JSON line payload (architecture §8.2).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "capability", "mode", "url", "status", "message"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "gate", "pattern", "identify", "create", "optimize", "repair",
+        "merge", "migrate", "hunt", "check", "disable", "video", "file"
+      ]
+    },
+    "mode": { "type": "string", "enum": ["oneshot", "batch"] },
+    "url": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": [
+        "fixed", "created", "optimized", "merged", "skipped", "failed",
+        "extracted", "disabled", "migrated", "hunted"
+      ]
+    },
+    "family": { "type": "string", "minLength": 1 },
+    "message": { "type": "string" },
+    "layer": {
+      "type": "string",
+      "enum": ["search", "toc", "content", "explore", "file_download", "ok", "skip"]
+    },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "fixed_n": { "type": "integer", "minimum": 0 },
+    "ops_summary": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "migrate_to": { "type": "string", "minLength": 1 },
+    "verify": { "type": "object", "additionalProperties": true }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["fixed", "created", "optimized", "merged"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["verify"],
+        "properties": {
+          "verify": {
+            "type": "object",
+            "required": ["success"],
+            "properties": {
+              "success": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "fixed" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "repair" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "created" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "create" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "optimized" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "optimize" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "merged" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "merge" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "extracted" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "pattern" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "migrated" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "migrate" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "hunted" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "hunt" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "disabled" } }, "required": ["status"] },
+      "then": { "properties": { "capability": { "const": "disable" } } }
+    }
+  ]
+}

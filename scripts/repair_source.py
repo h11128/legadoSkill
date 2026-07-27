@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import time
 import urllib.error
@@ -27,16 +26,16 @@ from mcp_client import (  # noqa: E402
     parse_json_text,
     tools_call,
 )
+from repair_cache import cooldown_for, note_rate_limit, note_verify  # noqa: E402
+from repair_check import check_args  # noqa: E402
 from repair_claim import append_index, assert_fixed_allowed, load_check  # noqa: E402
 from repair_helpers import fetch_page, header_map, layer_for_fail, smell_rules  # noqa: E402
 
 
 def default_mcp() -> tuple[str, str]:
-    cfg = _ROOT / "config" / "mcp_defaults.json"
-    if cfg.is_file():
-        data = json.loads(cfg.read_text(encoding="utf-8"))
-        return str(data.get("mcp_url") or ""), str(data.get("token") or "1234")
-    return "http://10.0.0.139:1236/mcp", "1234"
+    from mcp_client import load_endpoint
+
+    return load_endpoint()
 
 
 def cmd_triage(args: argparse.Namespace) -> int:
@@ -55,8 +54,6 @@ def cmd_triage(args: argparse.Namespace) -> int:
         "smells": smell_rules(source),
         "concurrentRate": source.get("concurrentRate"),
         "tocUrl": info.get("tocUrl") if info else None,
-        "budget_minutes": 5,
-        "note": "Hard stop 10 min; typical TOC fix should be 2-5 min with scripts",
     }
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:
@@ -77,7 +74,7 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     host = urlparse(page).netloc.replace(":", "_")
     dump_dir = Path(args.dump_dir)
     dump_dir.mkdir(parents=True, exist_ok=True)
-    safe = re.sub(r"[^\w.-]+", "_", page)[:100]
+    safe = "".join(ch if ch.isalnum() or ch in "-._" else "_" for ch in page)[:100]
     meta_path = dump_dir / f"{host}_{safe}.json"
     html_path = dump_dir / f"{host}_{safe}.html"
     body = result.pop("body", None)
@@ -91,14 +88,8 @@ def cmd_fetch(args: argparse.Namespace) -> int:
 
 def wait_check(mcp_url: str, token: str, poll: float) -> dict[str, Any]:
     while True:
-        raw = extract_text(
-            tools_call(
-                mcp_url,
-                token,
-                "get_check_progress",
-                {"resultOffset": 0, "resultLimit": 20},
-            )
-        )
+        raw = extract_text(tools_call(
+            mcp_url, token, "get_check_progress", {"resultOffset": 0, "resultLimit": 20}))
         snap = parse_json_text(raw)
         if isinstance(snap, dict) and not snap.get("running", False):
             return snap
@@ -114,9 +105,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
             extract_text(tools_call(args.mcp, args.token, "stop_check_sources", {}))
         except Exception:
             pass
-        if args.cooldown > 0:
-            print(f"cooldown {args.cooldown}s (site search gap)", flush=True)
-            time.sleep(args.cooldown)
+        cool = float(args.cooldown)
+        if args.auto_cooldown:
+            cool = max(cool, cooldown_for(args.url))
+        if cool > 0:
+            print(f"cooldown {cool:.1f}s (site search gap)", flush=True)
+            time.sleep(cool)
         started = time.time()
         print(
             extract_text(
@@ -124,13 +118,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     args.mcp,
                     args.token,
                     "start_check_sources",
-                    {
-                        "urls": [args.url],
-                        "enabledOnly": False,
-                        "keyword": args.keyword,
-                        "threadCount": 1,
-                        "timeoutMs": args.timeout_ms,
-                    },
+                    check_args(
+                        [args.url],
+                        args.keyword,
+                        thread_count=1,
+                        timeout_ms=args.timeout_ms,
+                    ),
                 )
             )
         )
@@ -150,12 +143,17 @@ def cmd_verify(args: argparse.Namespace) -> int:
             "success": ok,
             "message": (item or {}).get("message") if item else snap,
             "durationMs": int((time.time() - started) * 1000),
+            "cooldown_s": cool,
             "snap": {
                 "success": snap.get("success") if isinstance(snap, dict) else None,
                 "failed": snap.get("failed") if isinstance(snap, dict) else None,
                 "error": snap.get("error") if isinstance(snap, dict) else None,
             },
         }
+        note_verify(args.url, ok, int(out["durationMs"]), cool)
+        msg = str(out.get("message") or "")
+        if (not ok) and any(x in msg for x in ("搜索失效", "时间间隔", "频繁")):
+            note_rate_limit(args.url, max(20.0, cool + 5))
         if args.out:
             path = Path(args.out)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,6 +245,12 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--timeout-ms", type=int, default=60_000)
     v.add_argument("--poll", type=float, default=2.0)
     v.add_argument("--cooldown", type=float, default=0.0, help="sleep before check")
+    v.add_argument(
+        "--auto-cooldown",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="also apply EWMA host gap from cache (default on)",
+    )
     v.add_argument("--out")
     v.set_defaults(func=cmd_verify)
 

@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "capability": "repair",
+  "family": "Unknown",
+  "source_url": "https://www.example-novel.com",
+  "ops": [],
+  "rationale": "empty ops must fail"
+}

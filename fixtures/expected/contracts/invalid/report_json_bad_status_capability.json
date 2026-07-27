@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "capability": "gate",
+  "mode": "oneshot",
+  "url": "https://www.example-novel.com",
+  "status": "fixed",
+  "message": "gate cannot emit fixed",
+  "verify": { "success": true }
+}

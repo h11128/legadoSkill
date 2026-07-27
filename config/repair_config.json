@@ -1,0 +1,14 @@
+{
+  "identify_min_score": 2.0,
+  "identify_margin": 0.5,
+  "cluster_min_size": 3,
+  "ewma_alpha": 0.3,
+  "default_gap_s": 3.0,
+  "l1_timeout_s": 1.5,
+  "l2_timeout_s": 4.0,
+  "gate_concurrency": 32,
+  "check_discovery": false,
+  "soft_budget_s": 240,
+  "hard_budget_s": 300,
+  "dual_write_sqlite": true
+}

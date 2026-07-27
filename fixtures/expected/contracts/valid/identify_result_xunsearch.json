@@ -1,0 +1,16 @@
+{
+  "schema_version": "1",
+  "url": "https://www.example-novel.com",
+  "family": "XunsearchPid",
+  "fingerprint": {
+    "signals": ["search:xunsearch_q"],
+    "structural_hash": "abc123def456",
+    "confidence": 0.8
+  },
+  "evidence_urls": ["https://a.example.com"],
+  "score": 3.5,
+  "runner_up": {
+    "family": "GenericForm",
+    "score": 1.0
+  }
+}

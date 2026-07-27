@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/patch_plan.schema.json",
+  "title": "PatchPlan",
+  "description": "Adapter mutation plan (architecture §3.5 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "capability", "family", "source_url", "ops", "rationale"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "capability": {
+      "type": "string",
+      "enum": ["create", "optimize", "repair", "merge", "migrate"]
+    },
+    "family": { "type": "string", "minLength": 1 },
+    "source_url": { "type": "string", "minLength": 1 },
+    "ops": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/patch_op" }
+    },
+    "rationale": { "type": "string", "minLength": 1 },
+    "expected_layer": {
+      "type": "string",
+      "enum": ["search", "toc", "content", "explore", "file_download", "ok", "skip"]
+    },
+    "dry_run_ok": { "type": "boolean" }
+  },
+  "$defs": {
+    "patch_op": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": [
+            "set", "delete", "migrate_host", "merge_into",
+            "delete_source", "disable_source"
+          ]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "value": true,
+        "from_url": { "type": "string", "minLength": 1 },
+        "to_url": { "type": "string", "minLength": 1 },
+        "note": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "op": { "enum": ["set", "delete"] } },
+            "required": ["op"]
+          },
+          "then": { "required": ["path"] }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "set" } },
+            "required": ["op"]
+          },
+          "then": { "required": ["value"] }
+        }
+      ]
+    }
+  }
+}

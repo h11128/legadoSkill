@@ -1,0 +1,360 @@
+{
+  "generated_at": "2026-07-27T16:49:13.919631+00:00",
+  "git_sha": "e4d5d20",
+  "matrix_doc": "docs/repair-adapter-architecture.md",
+  "matrix_note": null,
+  "scripts": [
+    {
+      "name": "batch_check_mcp.py",
+      "path": "scripts/batch_check_mcp.py",
+      "has_main": true
+    },
+    {
+      "name": "disable_dead_sources.py",
+      "path": "scripts/disable_dead_sources.py",
+      "has_main": true
+    },
+    {
+      "name": "full_check_runner.py",
+      "path": "scripts/full_check_runner.py",
+      "has_main": true
+    },
+    {
+      "name": "mcp_channel.py",
+      "path": "scripts/mcp_channel.py",
+      "has_main": false
+    },
+    {
+      "name": "mcp_client.py",
+      "path": "scripts/mcp_client.py",
+      "has_main": false
+    },
+    {
+      "name": "mcp_discover.py",
+      "path": "scripts/mcp_discover.py",
+      "has_main": true
+    },
+    {
+      "name": "parity_inventory.py",
+      "path": "scripts/parity_inventory.py",
+      "has_main": true
+    },
+    {
+      "name": "parity_selftest.py",
+      "path": "scripts/parity_selftest.py",
+      "has_main": true
+    },
+    {
+      "name": "precheck_sources.py",
+      "path": "scripts/precheck_sources.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_bench10.py",
+      "path": "scripts/repair_bench10.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_cache.py",
+      "path": "scripts/repair_cache.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_check.py",
+      "path": "scripts/repair_check.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_claim.py",
+      "path": "scripts/repair_claim.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_classify.py",
+      "path": "scripts/repair_classify.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_debug_parse.py",
+      "path": "scripts/repair_debug_parse.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_debug_vs_check.py",
+      "path": "scripts/repair_debug_vs_check.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_deep_loop.py",
+      "path": "scripts/repair_deep_loop.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_deep_wave.py",
+      "path": "scripts/repair_deep_wave.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_diagnose.py",
+      "path": "scripts/repair_diagnose.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_domain_hunt.py",
+      "path": "scripts/repair_domain_hunt.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_domain_migrate.py",
+      "path": "scripts/repair_domain_migrate.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_goal15_run.py",
+      "path": "scripts/repair_goal15_run.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_harvest.py",
+      "path": "scripts/repair_harvest.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_helpers.py",
+      "path": "scripts/repair_helpers.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_knowledge.py",
+      "path": "scripts/repair_knowledge.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_one.py",
+      "path": "scripts/repair_one.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_patches.py",
+      "path": "scripts/repair_patches.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_prefilter.py",
+      "path": "scripts/repair_prefilter.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_progress.py",
+      "path": "scripts/repair_progress.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_queue.py",
+      "path": "scripts/repair_queue.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_refresh_phone_index.py",
+      "path": "scripts/repair_refresh_phone_index.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_retro.py",
+      "path": "scripts/repair_retro.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_rt_queue.py",
+      "path": "scripts/repair_rt_queue.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_rule_smells.py",
+      "path": "scripts/repair_rule_smells.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_search_probe.py",
+      "path": "scripts/repair_search_probe.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_search_wave.py",
+      "path": "scripts/repair_search_wave.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_serial.py",
+      "path": "scripts/repair_serial.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_session_log.py",
+      "path": "scripts/repair_session_log.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_source.py",
+      "path": "scripts/repair_source.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_wait.py",
+      "path": "scripts/repair_wait.py",
+      "has_main": false
+    },
+    {
+      "name": "repair_wave.py",
+      "path": "scripts/repair_wave.py",
+      "has_main": true
+    },
+    {
+      "name": "repair_why_wave.py",
+      "path": "scripts/repair_why_wave.py",
+      "has_main": true
+    },
+    {
+      "name": "shard_urls.py",
+      "path": "scripts/shard_urls.py",
+      "has_main": true
+    },
+    {
+      "name": "source_gate_rs.py",
+      "path": "scripts/source_gate_rs.py",
+      "has_main": true
+    },
+    {
+      "name": "video_prefilter.py",
+      "path": "scripts/video_prefilter.py",
+      "has_main": true
+    },
+    {
+      "name": "video_repair_one.py",
+      "path": "scripts/video_repair_one.py",
+      "has_main": true
+    }
+  ],
+  "main_scripts": [
+    "batch_check_mcp.py",
+    "disable_dead_sources.py",
+    "full_check_runner.py",
+    "mcp_discover.py",
+    "parity_inventory.py",
+    "parity_selftest.py",
+    "precheck_sources.py",
+    "repair_bench10.py",
+    "repair_debug_vs_check.py",
+    "repair_deep_loop.py",
+    "repair_deep_wave.py",
+    "repair_diagnose.py",
+    "repair_domain_hunt.py",
+    "repair_domain_migrate.py",
+    "repair_goal15_run.py",
+    "repair_harvest.py",
+    "repair_one.py",
+    "repair_prefilter.py",
+    "repair_progress.py",
+    "repair_queue.py",
+    "repair_refresh_phone_index.py",
+    "repair_retro.py",
+    "repair_rt_queue.py",
+    "repair_search_wave.py",
+    "repair_serial.py",
+    "repair_session_log.py",
+    "repair_source.py",
+    "repair_wave.py",
+    "repair_why_wave.py",
+    "shard_urls.py",
+    "source_gate_rs.py",
+    "video_prefilter.py",
+    "video_repair_one.py"
+  ],
+  "matrix_scripts": [
+    "batch_check_mcp.py",
+    "disable_dead_sources.py",
+    "full_check_runner.py",
+    "mcp_channel.py",
+    "mcp_client.py",
+    "mcp_discover.py",
+    "parity_inventory.py",
+    "parity_selftest.py",
+    "precheck_sources.py",
+    "repair_bench10.py",
+    "repair_cache.py",
+    "repair_check.py",
+    "repair_claim.py",
+    "repair_classify.py",
+    "repair_debug_parse.py",
+    "repair_debug_vs_check.py",
+    "repair_deep_loop.py",
+    "repair_deep_wave.py",
+    "repair_diagnose.py",
+    "repair_domain_hunt.py",
+    "repair_domain_migrate.py",
+    "repair_goal15_run.py",
+    "repair_harvest.py",
+    "repair_helpers.py",
+    "repair_knowledge.py",
+    "repair_one.py",
+    "repair_patches.py",
+    "repair_prefilter.py",
+    "repair_progress.py",
+    "repair_queue.py",
+    "repair_refresh_phone_index.py",
+    "repair_retro.py",
+    "repair_rt_queue.py",
+    "repair_rule_smells.py",
+    "repair_search_probe.py",
+    "repair_search_wave.py",
+    "repair_serial.py",
+    "repair_session_log.py",
+    "repair_source.py",
+    "repair_wait.py",
+    "repair_wave.py",
+    "repair_why_wave.py",
+    "shard_urls.py",
+    "source_gate_rs.py",
+    "video_prefilter.py",
+    "video_repair_one.py"
+  ],
+  "coverage": {
+    "main_not_in_matrix": [],
+    "matrix_not_on_disk": [],
+    "main_in_matrix": [
+      "batch_check_mcp.py",
+      "disable_dead_sources.py",
+      "full_check_runner.py",
+      "mcp_discover.py",
+      "parity_inventory.py",
+      "parity_selftest.py",
+      "precheck_sources.py",
+      "repair_bench10.py",
+      "repair_debug_vs_check.py",
+      "repair_deep_loop.py",
+      "repair_deep_wave.py",
+      "repair_diagnose.py",
+      "repair_domain_hunt.py",
+      "repair_domain_migrate.py",
+      "repair_goal15_run.py",
+      "repair_harvest.py",
+      "repair_one.py",
+      "repair_prefilter.py",
+      "repair_progress.py",
+      "repair_queue.py",
+      "repair_refresh_phone_index.py",
+      "repair_retro.py",
+      "repair_rt_queue.py",
+      "repair_search_wave.py",
+      "repair_serial.py",
+      "repair_session_log.py",
+      "repair_source.py",
+      "repair_wave.py",
+      "repair_why_wave.py",
+      "shard_urls.py",
+      "source_gate_rs.py",
+      "video_prefilter.py",
+      "video_repair_one.py"
+    ]
+  }
+}

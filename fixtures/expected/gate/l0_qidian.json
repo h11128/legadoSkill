@@ -1,0 +1,14 @@
+{
+  "fixture": "l0_qidian",
+  "description": "L0 denylist skip for qidian.com (verify_skip_rules id=qidian)",
+  "url": "https://www.qidian.com/book/123456",
+  "mode": "l0",
+  "expected": {
+    "verify": false,
+    "layer": "L0",
+    "action": "skip",
+    "reason": "waf_official",
+    "rule_id": "qidian"
+  },
+  "generated_from": "repair_prefilter.match_l0 + config/verify_skip_rules.json"
+}

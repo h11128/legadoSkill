@@ -1,0 +1,47 @@
+{
+  "comment": "Curated mirror/domain candidates from web search + prior audits. Update after each hunt.",
+  "seeds": {
+    "www.zxcs.info": {
+      "note": "Migrated 2026-07-26 to https://www.zxcs.click/; search=/search?q={{key}}; list=book-list/book-li",
+      "migrated_to": "https://www.zxcs.click/",
+      "candidates": [
+        "https://www.zxcs.click/",
+        "https://www.zxcs.live/",
+        "https://zxcs.zip/",
+        "https://www.zxcs.info/"
+      ]
+    },
+    "zxcs.info": {
+      "note": "same family; use zxcs.click",
+      "migrated_to": "https://www.zxcs.click/",
+      "candidates": [
+        "https://www.zxcs.click/",
+        "https://www.zxcs.live/"
+      ]
+    },
+    "book.tiexue.net": {
+      "note": "Official shutdown notice ~2026-03 for online reading; no successor domain found",
+      "shutdown": true,
+      "candidates": [
+        "https://book.tiexue.net/"
+      ]
+    },
+    "www.dddw.net": {
+      "note": "dddw timeout cluster; bxwx-named clones are usually UNRELATED — L2-alive != official successor",
+      "confidence": "low",
+      "candidates": [
+        "https://www.dddw.net/",
+        "http://www.dddw.net/"
+      ]
+    },
+    "www.627txt.com": {
+      "note": "Migrated 2026-07-26 to https://www.aiqu226.com/; search-card + body@text content",
+      "migrated_to": "https://www.aiqu226.com/",
+      "candidates": [
+        "https://www.aiqu226.com/",
+        "https://aiqu225.com/",
+        "https://www.627txt.com/"
+      ]
+    }
+  }
+}

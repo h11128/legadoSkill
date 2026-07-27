@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "capability": "repair",
+  "family": "XunsearchPid",
+  "source_url": "https://www.example-novel.com",
+  "ops": [
+    {
+      "op": "set",
+      "path": "searchUrl",
+      "value": "/search.php?q={{key}}"
+    },
+    {
+      "op": "set",
+      "path": "ruleSearch.bookList",
+      "value": ".result-item"
+    }
+  ],
+  "rationale": "xunsearch list selector drifted",
+  "expected_layer": "search"
+}

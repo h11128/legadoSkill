@@ -9,29 +9,47 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
 
 ## Hard bans
 
-1. **Never claim `fixed` / 已修复 without device single-URL verify** (`repair_source.py verify` or equivalent `start_check_sources` one URL → `success=true`). `save_source` alone is not done.
-2. **Never run fix/debug while bulk owns MCP** (`full_check_runner` / `batch_check_mcp`). Check `temp/mcp_channel.lock` / `temp/full_check/runner.lock` first.
-3. **Never spawn parallel fix agents** on the same phone MCP.
-4. **Never rewrite search rules** when HTML contains 搜索时间间隔 / 请稍后再搜索 / 访问过于频繁 — cooldown then re-verify once.
-5. **Never create** `legado/.local-scripts/inspect_*.py` one-offs when `scripts/repair_source.py fetch` covers the need.
-6. **Never treat 15 minutes as the target** — target **2–5 min**, hard stop **10 min** → `skipped`/`failed` + log.
+1. **Never claim `fixed` without device verify** (`repair_one` or `repair_source.py verify` → success).
+2. **Never run fix while bulk owns MCP** — `repair_source.py channel` must be idle.
+3. **One phone = one check/debug job** (MCP single-flight). Do **parallel PC** work
+   (fetch HTML / triage / prepare patches) and **one batch** `start_check_sources` for many URLs.
+   Do not run two `debug_source` / check jobs on the same device.
+4. **Do not repair 发现 (explore)** unless the user explicitly asks. Default verify uses
+   `checkDiscovery=false` (MCP) and treats 发现-only failures as success for repair scoring.
+5. **Deep-fix checklist is mandatory** (skill SOT): channel → diagnose → branch → verify → ledger.
+   Trust diagnose `layer`. If `fake_detail` (search page as 1 book, wmp8) → fix **search**, not toc.
+   「搜索目录失效」is ambiguous — 画本=TOC, 御书屋=dead search; never guess from Chinese alone.
+6. **Wave is triage, not fix**: `repair_wave` may only apply *meaningful* smells; rate-only ≠ fixed.
+7. **Never rewrite search rules** on rate-limit HTML — rely on EWMA cooldown cache.
+8. **Never create** `inspect_*.py` when `repair_diagnose` / `repair_source.py fetch` covers it.
+9. **Prefer** `repair_wave` → `repair_diagnose` → layer patch → batch/single verify.
+10. Wall-time budgets (do not pad):
+   - Root cause known, 1–2 field patch + verify: **≤1 min** (aim **30–45s**).
+   - Diagnose + HTML + patch: target **2–3 min**.
+   - Soft warn **4 min**; hard stop **5 min** → skip + ledger.
+11. **Never end a source attempt without** `repair_session_log.py append`.
+12. **After domain migrate**: fetch new search form HTML before verify.
+13. **If debug OK but check fails** (下载链接为空 / ~100ms): `repair_debug_vs_check.py` first
+    (bookUrl → infoHtml trap).
+
+## Types (do not confuse)
+
+| bookSourceType | Meaning |
+|----------------|---------|
+| 0 | text novel |
+| 3 | **file** (download / m3u8 list via downloadUrls) |
+| 4 | **video** |
 
 ## Required path
 
 ```
-repair_source.py triage → fetch → minimal save → verify (--cooldown) → log
+repair_source.py channel
+python scripts/repair_wave.py --urls-file urls.txt   # parallel PC patch + one batch verify
+# or single:
+python scripts/repair_one.py --url … --fail-msg …
+python scripts/repair_session_log.py append --url … --step check --result '…'
 ```
 
-Use docs: `docs/ESSENTIAL_KNOWLEDGE_SUMMARY.md`, `docs/TOC_PAGINATION_RULES.md`, `assets/css选择器规则.txt`.
-
-## Defaults
-
-- MCP: `config/mcp_defaults.json` (do not hardcode stale LAN IPs).
-- Ledger: `repair_source.py log` + `repair_source.py index`.
-- Skill: `legado-book-source-repair`.
-
-## Known rule smells
-
-- Do not mix `||` fallback with `##` regex on the same field.
-- Broad `a@href##…##` as tocUrl often resolves to homepage — confirm resolved toc URL.
-- tocUrl pointing at 「在线阅读」content page → clear or retarget catalog.
+Cache: `temp/full_fix/cache/`. MCP: `config/mcp_defaults.json`.  
+Ledger: `temp/full_fix/repair_session_ledger.jsonl`.  
+Retros: `docs/source-repair-retrospective.md`, `docs/source-repair-retro-migrate-video-2026-07-26.md`.

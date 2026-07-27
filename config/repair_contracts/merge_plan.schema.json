@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/merge_plan.schema.json",
+  "title": "MergePlan",
+  "description": "Source merge plan (architecture §3.5 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "strategy", "survivors", "drop", "canonical"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "strategy": { "type": "string", "enum": ["same_host", "same_family", "manual"] },
+    "survivors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "drop": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "canonical": { "type": "object", "additionalProperties": true },
+    "score_breakdown": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["enabled", "last_verify_ok", "rule_completeness", "total"],
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "last_verify_ok": { "type": "boolean" },
+          "respond_time_ms": { "type": "integer", "minimum": 0 },
+          "rule_completeness": { "type": "number", "minimum": 0, "maximum": 1 },
+          "total": { "type": "number" }
+        }
+      }
+    }
+  }
+}

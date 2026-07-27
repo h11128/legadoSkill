@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/diagnose_result.schema.json",
+  "title": "DiagnoseResult",
+  "description": "Layer diagnosis for one source URL (architecture §3.3 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "url", "layer", "evidence"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "url": { "type": "string", "minLength": 1 },
+    "layer": {
+      "type": "string",
+      "enum": ["search", "toc", "content", "explore", "file_download", "ok", "skip"]
+    },
+    "fail_msg": { "type": "string" },
+    "fake_detail": { "type": "boolean" },
+    "reclassified_from": {
+      "type": "string",
+      "enum": ["search", "toc", "content", "explore", "file_download", "ok", "skip"]
+    },
+    "gate": { "type": "object", "additionalProperties": true },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "search_url": { "type": "string" },
+        "book_url": { "type": "string" },
+        "toc_url": { "type": "string" },
+        "debug_snippet": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "fake_detail": { "const": true } },
+        "required": ["fake_detail"]
+      },
+      "then": {
+        "properties": { "layer": { "const": "search" } }
+      }
+    }
+  ]
+}

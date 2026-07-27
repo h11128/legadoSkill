@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "ts": "2026-07-27T06:30:00Z",
+  "url": "https://www.example-novel.com",
+  "step": "check",
+  "result": "ok",
+  "note": "device verify passed",
+  "capability": "repair",
+  "family": "XunsearchPid",
+  "layer": "search",
+  "report_status": "fixed"
+}

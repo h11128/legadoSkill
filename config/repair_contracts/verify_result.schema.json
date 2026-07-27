@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/verify_result.schema.json",
+  "title": "VerifyResult",
+  "description": "Device check / verify outcome (architecture §3.5 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "url", "success", "message", "mode", "check_discovery"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "url": { "type": "string", "minLength": 1 },
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "mode": { "type": "string", "enum": ["oneshot", "batch"] },
+    "check_discovery": { "type": "boolean" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "raw_check": { "type": "object", "additionalProperties": true }
+  }
+}

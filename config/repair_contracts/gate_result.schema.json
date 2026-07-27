@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/gate_result.schema.json",
+  "title": "GateResult",
+  "description": "L0/L1/L2 gate decision (architecture §3.3 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "url", "verify", "action", "reason"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "url": { "type": "string", "minLength": 1 },
+    "verify": { "type": "boolean" },
+    "action": { "type": "string", "enum": ["verify", "migrate", "skip", "disable", "video", "hunt"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "migrate_to": { "type": "string", "minLength": 1 },
+    "l0": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["rule_id", "action", "reason"],
+      "properties": {
+        "rule_id": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "enum": ["verify", "migrate", "skip", "disable", "video", "hunt"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "l1": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ok"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "error": { "type": "string" },
+        "ip": { "type": "string" },
+        "latency_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "l2": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ok"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "status": { "type": "integer" },
+        "final_url": { "type": "string" },
+        "title": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "deadish": { "type": "string" },
+        "host_migrated": { "type": "boolean" },
+        "from_host": { "type": "string" },
+        "to_host": { "type": "string" },
+        "snippet": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "action": { "const": "migrate" } },
+        "required": ["action"]
+      },
+      "then": { "required": ["migrate_to"] }
+    },
+    {
+      "if": {
+        "properties": { "action": { "const": "verify" } },
+        "required": ["action"]
+      },
+      "then": {
+        "properties": { "verify": { "const": true } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "action": { "enum": ["skip", "disable", "migrate", "video", "hunt"] } },
+        "required": ["action"]
+      },
+      "then": {
+        "properties": { "verify": { "const": false } }
+      }
+    }
+  ]
+}

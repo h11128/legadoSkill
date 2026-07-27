@@ -1,0 +1,15 @@
+{
+  "fixture": "l0_taopian_video",
+  "description": "L0 denylist action=video for taopianzy.com (verify_skip_rules id=taopian); also covered by video_source_routes.json",
+  "url": "https://www.taopianzy.com/index.php",
+  "mode": "l0",
+  "expected": {
+    "verify": false,
+    "layer": "L0",
+    "action": "video",
+    "reason": "non_book_video",
+    "rule_id": "taopian"
+  },
+  "generated_from": "repair_prefilter.match_l0 + config/verify_skip_rules.json",
+  "notes": "Phase F: companion to l0_qidian.json. Gate L0 routes media hosts to action=video (not novel verify). Rust source_video golden tests use config/video_source_routes.json separately (flow=video, reason=m3u8_movie)."
+}

@@ -91,7 +91,23 @@ def header_map(source: dict[str, Any]) -> dict[str, str]:
     return headers
 
 
-def fetch_page(url: str, headers: dict[str, str], timeout: float = 25.0) -> dict[str, Any]:
+def fetch_page(
+    url: str,
+    headers: dict[str, str],
+    timeout: float = 25.0,
+    *,
+    use_cache: bool = True,
+    cache_max_age_s: float = 3600.0,
+) -> dict[str, Any]:
+    if use_cache:
+        try:
+            from repair_cache import get_html, note_rate_limit, put_html
+        except ImportError:
+            get_html = put_html = note_rate_limit = None  # type: ignore
+        if get_html:
+            cached = get_html(url, max_age_s=cache_max_age_s)
+            if cached and cached.get("ok"):
+                return cached
     req = urllib.request.Request(url, headers=headers, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -118,7 +134,7 @@ def fetch_page(url: str, headers: dict[str, str], timeout: float = 25.0) -> dict
             links.append({"text": label[:80], "href": urljoin(final, href)})
             if len(links) >= 30:
                 break
-    return {
+    result = {
         "ok": True,
         "status": code,
         "final_url": final,
@@ -128,4 +144,15 @@ def fetch_page(url: str, headers: dict[str, str], timeout: float = 25.0) -> dict
         "rate_limited": rate,
         "toc_candidate_links": links[:20],
         "snippet": text[:500],
+        "cache_hit": False,
     }
+    if use_cache:
+        try:
+            from repair_cache import note_rate_limit, put_html
+
+            put_html(url, result)
+            if rate:
+                note_rate_limit(url, 20.0)
+        except ImportError:
+            pass
+    return result

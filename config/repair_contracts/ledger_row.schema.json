@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/ledger_row.schema.json",
+  "title": "LedgerRow",
+  "description": "Append-only repair session ledger row (architecture §3.5 / §8.1).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "ts", "url", "step", "result"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "ts": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "minLength": 1 },
+    "step": {
+      "type": "string",
+      "enum": [
+        "gate", "diagnose", "migrate", "hunt", "html", "probe", "patch",
+        "apply", "debug", "check", "divert", "skip", "claim", "pattern",
+        "create", "optimize", "merge", "disable"
+      ]
+    },
+    "result": { "type": "string" },
+    "note": { "type": "string" },
+    "waste": { "type": "string" },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "gate", "pattern", "identify", "create", "optimize", "repair",
+        "merge", "migrate", "hunt", "check", "disable", "video", "file"
+      ]
+    },
+    "family": { "type": "string", "minLength": 1 },
+    "layer": {
+      "type": "string",
+      "enum": ["search", "toc", "content", "explore", "file_download", "ok", "skip"]
+    },
+    "report_status": {
+      "type": "string",
+      "enum": [
+        "fixed", "created", "optimized", "merged", "skipped", "failed",
+        "extracted", "disabled", "migrated", "hunted"
+      ]
+    }
+  }
+}

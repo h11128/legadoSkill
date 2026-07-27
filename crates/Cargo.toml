@@ -1,0 +1,55 @@
+[workspace]
+resolver = "2"
+members = [
+  "source-types",
+  "source-ports",
+  "source-contracts",
+  "source-db",
+  "source-gate",
+  "source-cache",
+  "source-probe",
+  "source-patch",
+  "source-spine",
+  "source-cli",
+  "source-mcp",
+  "source-identify",
+  "source-pattern",
+  "source-adapters",
+  "source-video",
+]
+default-members = ["source-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["legadoSkill"]
+
+[workspace.dependencies]
+source_types = { path = "source-types" }
+source_ports = { path = "source-ports" }
+source_contracts = { path = "source-contracts" }
+source_db = { path = "source-db" }
+source_gate = { path = "source-gate" }
+source_cache = { path = "source-cache" }
+source_probe = { path = "source-probe" }
+source_patch = { path = "source-patch" }
+source_spine = { path = "source-spine" }
+source_mcp = { path = "source-mcp" }
+source_identify = { path = "source-identify" }
+source_pattern = { path = "source-pattern" }
+source_adapters = { path = "source-adapters" }
+source_video = { path = "source-video" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+sha2 = "0.10"
+hex = "0.4"
+rusqlite = { version = "0.32", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+jsonschema = "0.28"
+url = "2"
+ureq = { version = "2.12", default-features = true, features = ["gzip", "tls"] }
+base64 = "0.22"

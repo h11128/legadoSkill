@@ -1,0 +1,9 @@
+{
+  "comment": "Route media hosts to video repair flow (not novel repair_one).",
+  "routes": [
+    {"id": "taopian", "pattern": "taopianzy\\.com", "flow": "video", "reason": "m3u8_movie"},
+    {"id": "uku", "pattern": "ukuzy\\.com", "flow": "video", "reason": "m3u8_movie"},
+    {"id": "nangua", "pattern": "nanguady\\.cc", "flow": "video", "reason": "vod_movie"},
+    {"id": "generic_zy", "pattern": "zy\\.com/home|资源网|影视", "flow": "video", "reason": "name_or_path_media"}
+  ]
+}

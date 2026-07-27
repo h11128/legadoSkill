@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legadoSkill.local/repair_contracts/pattern_cluster.schema.json",
+  "title": "PatternCluster",
+  "description": "Extracted site-family cluster (architecture §3.4 / §8.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "family", "size", "fingerprint", "centroid", "exemplars"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "family": { "type": "string", "minLength": 1 },
+    "size": { "type": "integer", "minimum": 1 },
+    "fingerprint": { "$ref": "#/$defs/fingerprint" },
+    "centroid": { "type": "object", "additionalProperties": true },
+    "exemplars": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "extracted_at": { "type": "string", "minLength": 1 },
+    "adapter_version": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signals", "structural_hash", "confidence"],
+      "properties": {
+        "signals": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "structural_hash": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

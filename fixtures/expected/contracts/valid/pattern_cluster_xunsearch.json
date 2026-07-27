@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "family": "XunsearchPid",
+  "size": 4,
+  "fingerprint": {
+    "signals": ["search:xunsearch_q", "list:.result-item"],
+    "structural_hash": "abc123def456",
+    "confidence": 0.85
+  },
+  "centroid": {
+    "searchUrl": "/search.php?q={{key}}",
+    "ruleSearch": { "bookList": ".result-item" }
+  },
+  "exemplars": [
+    "https://a.example.com",
+    "https://b.example.com"
+  ],
+  "coverage": {
+    "searchUrl": 1.0,
+    "ruleSearch.bookList": 0.75
+  },
+  "extracted_at": "2026-07-27T06:00:00Z"
+}
