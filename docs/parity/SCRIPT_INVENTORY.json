@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-27T16:49:13.919631+00:00",
-  "git_sha": "e4d5d20",
+  "generated_at": "2026-07-27T19:30:23.365885+00:00",
+  "git_sha": "c1b39b0",
   "matrix_doc": "docs/repair-adapter-architecture.md",
   "matrix_note": null,
   "scripts": [
@@ -40,9 +40,19 @@
       "has_main": true
     },
     {
+      "name": "parity_rust_suite.py",
+      "path": "scripts/parity_rust_suite.py",
+      "has_main": true
+    },
+    {
       "name": "parity_selftest.py",
       "path": "scripts/parity_selftest.py",
       "has_main": true
+    },
+    {
+      "name": "parity_suites.py",
+      "path": "scripts/parity_suites.py",
+      "has_main": false
     },
     {
       "name": "precheck_sources.py",
@@ -137,7 +147,7 @@
     {
       "name": "repair_patches.py",
       "path": "scripts/repair_patches.py",
-      "has_main": false
+      "has_main": true
     },
     {
       "name": "repair_prefilter.py",
@@ -172,12 +182,12 @@
     {
       "name": "repair_rule_smells.py",
       "path": "scripts/repair_rule_smells.py",
-      "has_main": false
+      "has_main": true
     },
     {
       "name": "repair_search_probe.py",
       "path": "scripts/repair_search_probe.py",
-      "has_main": false
+      "has_main": true
     },
     {
       "name": "repair_search_wave.py",
@@ -220,6 +230,11 @@
       "has_main": true
     },
     {
+      "name": "source_cli_shim.py",
+      "path": "scripts/source_cli_shim.py",
+      "has_main": false
+    },
+    {
       "name": "source_gate_rs.py",
       "path": "scripts/source_gate_rs.py",
       "has_main": true
@@ -241,6 +256,7 @@
     "full_check_runner.py",
     "mcp_discover.py",
     "parity_inventory.py",
+    "parity_rust_suite.py",
     "parity_selftest.py",
     "precheck_sources.py",
     "repair_bench10.py",
@@ -253,12 +269,15 @@
     "repair_goal15_run.py",
     "repair_harvest.py",
     "repair_one.py",
+    "repair_patches.py",
     "repair_prefilter.py",
     "repair_progress.py",
     "repair_queue.py",
     "repair_refresh_phone_index.py",
     "repair_retro.py",
     "repair_rt_queue.py",
+    "repair_rule_smells.py",
+    "repair_search_probe.py",
     "repair_search_wave.py",
     "repair_serial.py",
     "repair_session_log.py",
@@ -278,6 +297,7 @@
     "mcp_client.py",
     "mcp_discover.py",
     "parity_inventory.py",
+    "parity_rust_suite.py",
     "parity_selftest.py",
     "precheck_sources.py",
     "repair_bench10.py",
@@ -327,6 +347,7 @@
       "full_check_runner.py",
       "mcp_discover.py",
       "parity_inventory.py",
+      "parity_rust_suite.py",
       "parity_selftest.py",
       "precheck_sources.py",
       "repair_bench10.py",
@@ -339,12 +360,15 @@
       "repair_goal15_run.py",
       "repair_harvest.py",
       "repair_one.py",
+      "repair_patches.py",
       "repair_prefilter.py",
       "repair_progress.py",
       "repair_queue.py",
       "repair_refresh_phone_index.py",
       "repair_retro.py",
       "repair_rt_queue.py",
+      "repair_rule_smells.py",
+      "repair_search_probe.py",
       "repair_search_wave.py",
       "repair_serial.py",
       "repair_session_log.py",

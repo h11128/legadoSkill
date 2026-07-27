@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Common source-rule smells learned from deep fixes (wmp8 / gongzicp)."""
+"""Common source-rule smells learned from deep fixes (wmp8 / gongzicp).
+
+Core safe fixes live in Rust `source_patch::smells` and run inside `source-cli repair`.
+This module stays importable for Python callers / parity; set REPAIR_USE_PYTHON=1 to
+force this implementation when scripting.
+"""
 
 from __future__ import annotations
 
@@ -96,27 +101,35 @@ def suggest_bookurl_selector(rule_search: dict[str, Any] | None, parsed: dict[st
 def apply_safe_rule_fixes(source: dict[str, Any]) -> list[str]:
     """Apply non-destructive learned fixes. Returns change labels."""
     changes: list[str] = []
-    toc = source.get("ruleToc")
-    if isinstance(toc, dict):
-        cu = toc.get("chapterUrl")
-        fixed, changed = fix_webview_quotes(str(cu) if cu is not None else None)
-        if changed and fixed is not None:
-            toc = dict(toc)
-            toc["chapterUrl"] = fixed
-            source["ruleToc"] = toc
-            changes.append("webview_quotes")
-    # also scan content nextContentUrl rarely
-    content = source.get("ruleContent")
-    if isinstance(content, dict):
-        for key in ("nextContentUrl", "content"):
-            val = content.get(key)
+    # webView quotes anywhere URL-ish fields (mianfei22 bookUrl had {'webView': true})
+    for rule_key, field_keys in (
+        ("ruleSearch", ("bookUrl",)),
+        ("ruleBookInfo", ("tocUrl", "init")),
+        ("ruleToc", ("chapterUrl", "chapterList")),
+        ("ruleContent", ("nextContentUrl", "content")),
+    ):
+        rule = source.get(rule_key)
+        if not isinstance(rule, dict):
+            continue
+        rule = dict(rule)
+        touched = False
+        for fk in field_keys:
+            val = rule.get(fk)
             if isinstance(val, str) and "webView" in val:
                 fixed, changed = fix_webview_quotes(val)
                 if changed and fixed is not None:
-                    content = dict(content)
-                    content[key] = fixed
-                    source["ruleContent"] = content
-                    changes.append(f"webview_quotes:{key}")
+                    rule[fk] = fixed
+                    changes.append(f"webview_quotes:{rule_key}.{fk}")
+                    touched = True
+        if touched:
+            source[rule_key] = rule
+    # searchUrl may embed webView options after ##$##,
+    su = source.get("searchUrl")
+    if isinstance(su, str) and "webView" in su:
+        fixed, changed = fix_webview_quotes(su)
+        if changed and fixed is not None:
+            source["searchUrl"] = fixed
+            changes.append("webview_quotes:searchUrl")
     rs = source.get("ruleSearch")
     if isinstance(rs, dict):
         bu = rs.get("bookUrl")
@@ -127,3 +140,14 @@ def apply_safe_rule_fixes(source: dict[str, Any]) -> list[str]:
             source["ruleSearch"] = rs
             changes.append("bookUrl_class_space")
     return changes
+
+
+if __name__ == "__main__":
+    import sys
+
+    print(
+        "repair_rule_smells: library only — safe fixes run via `source-cli repair` "
+        "(source_patch::smells). Import apply_safe_rule_fixes from this module for Python.",
+        file=sys.stderr,
+    )
+    raise SystemExit(0)

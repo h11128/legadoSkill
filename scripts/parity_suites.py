@@ -273,10 +273,17 @@ def run_inventory_suite() -> dict[str, Any]:
     )
 
 
+def run_rust_cli_suite() -> dict[str, Any]:
+    from parity_rust_suite import run_rust_cli_suite as _run
+
+    return _run()
+
+
 SUITE_RUNNERS: dict[str, Callable[[], dict[str, Any]]] = {
     "fixtures": run_fixtures_suite,
     "cli-help": run_cli_help_suite,
     "imports": run_imports_suite,
     "schemas": run_schemas_suite,
     "inventory": run_inventory_suite,
+    "rust-cli": run_rust_cli_suite,
 }

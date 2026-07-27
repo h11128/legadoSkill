@@ -335,4 +335,21 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        sub = ap.add_subparsers(dest="cmd", required=True)
+        s = sub.add_parser("status")
+        s.add_argument("--goal", type=int, default=100)
+        n = sub.add_parser("next")
+        n.add_argument("--why", default=str(_ROOT / "temp/full_fix/wave20_why.json"))
+        n.add_argument("--l2-tries", type=int, default=5)
+        args = ap.parse_args()
+        if args.cmd == "status":
+            raise SystemExit(run_source_cli(["progress", "--cmd", "status"]))
+        if args.cmd == "next":
+            raise SystemExit(run_source_cli(["progress", "--cmd", "next"]))
     raise SystemExit(main())

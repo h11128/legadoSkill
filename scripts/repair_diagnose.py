@@ -399,4 +399,22 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        ap.add_argument("--url", required=True)
+        ap.add_argument("--key", default="我的")
+        ap.add_argument("--out", default="temp/full_fix/diagnose.json")
+        ap.add_argument("--l0-only", action="store_true")
+        ap.add_argument("--debug-file")
+        args = ap.parse_args()
+        extra = ["diagnose", "--url", args.url, "--key", args.key]
+        if args.l0_only:
+            extra.append("--l0-only")
+        if args.debug_file:
+            extra.extend(["--debug-file", args.debug_file])
+        raise SystemExit(run_source_cli(extra))
     raise SystemExit(main())

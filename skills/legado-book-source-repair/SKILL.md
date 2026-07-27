@@ -20,9 +20,9 @@ Track: `python scripts/repair_progress.py status --goal 100`.
 | MCP discover (auto) | `python scripts/mcp_discover.py` — also syncs `~/.cursor/mcp.json` |
 | Pipeline (layer) | `docs/repair-pipeline-design.md` |
 | Fix-agent prompt | `docs/FIX_AGENT_PROMPT.md` |
-| Platform (Rust) | `docs/repair-adapter-architecture.md` — **prefer `source-cli`**; Python `scripts/*.py` still OK until §12 cutover sign-off |
+| Platform (Rust) | `docs/repair-adapter-architecture.md` — **§12 functional green**; default `source-cli`; Python shims OK; §12.6 perf cutover pending |
 
-**Entry preference:** Prefer `source-cli gate` / `repair-dry` for gate+adapter smoke. **Full deep-fix** (diagnose layer → branch → verify) still uses Python (`repair_diagnose` / `repair_deep_loop` / `repair_one`) until §12 cutover. `source-cli repair` is live MCP + seed adapters only — not a replace for the diagnose checklist yet.
+**Entry preference:** Default to **`source-cli`** (`diagnose` → `repair --mode oneshot`). Script names (`repair_diagnose.py`, `repair_deep_loop.py`, …) are thin shims unless `REPAIR_USE_PYTHON=1`. Orchestration (`repair_wave`, harvest, parity) stays Python.
 
 **Do not hard-code phone IPs in prompts or skill text.** Scripts call `ensure_session`,
 which rediscovers on connect failure and updates SOT. Agents must not ask the user to
@@ -53,8 +53,8 @@ That burned minutes and violated the 2–3 min budget. Pick → diagnose → pat
 
 | Mode | When | Command / agent behavior |
 |------|------|---------------------------|
-| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | **全量深修仍以 Python diagnose→branch 为准**（`repair_diagnose` / `repair_deep_loop`）。Rust `source-cli repair` = gate + seed-adapter oneshot（非完整 layer 分支）；`repair-dry` 冒烟。§12 cutover 前勿跳过 diagnose |
-| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `repair_deep_loop.py --mode batch --urls-file … --limit N`（Python 仍为主批量入口）；流式 `REPORT:`；勿整批 AwaitShell |
+| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | `source-cli diagnose` → `source-cli repair --mode oneshot --url URL`（shim: `repair_diagnose.py` / `repair_deep_loop.py --mode oneshot`）。必须走 layer；假详情不修 toc |
+| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `source-cli repair --mode batch --urls-file … --limit N`（shim: `repair_deep_loop.py --mode batch`）；勿整批 AwaitShell |
 
 ## Deep-fix checklist (one URL)
 
@@ -82,13 +82,14 @@ Budget clock starts at **pick**. Diagnose+patch **2–3 min**; hard stop **5 min
 ```bash
 cd E:/Projects/legadoSkill
 python scripts/repair_source.py channel
+# progress next (shim → source-cli progress):
 python scripts/repair_progress.py next
-# Prefer Rust oneshot when bin available:
-#   (cd crates && cargo build -p source_cli) && crates/target/debug/source-cli.exe repair --url URL
-# Gate smoke: source-cli gate --url URL   |   repair-dry --url URL [--html file]
-# Python equivalent (still valid):
+# Build once:
+#   (cd crates && cargo build -p source_cli)
+crates/target/debug/source-cli.exe diagnose --url URL --key 我的
+crates/target/debug/source-cli.exe repair --mode oneshot --url URL
+# Or shim entrypoints (same flags):
 python scripts/repair_diagnose.py --url URL --key 我的
-# then patch + verify; or:
 python scripts/repair_deep_loop.py --mode oneshot --url URL
 ```
 
@@ -156,21 +157,17 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 
 | Entry | Role |
 |--------|------|
-| **`source-cli repair`** | Live oneshot: MCP get → AdapterRegistry → save/verify |
+| **`source-cli diagnose`** | L2 fail-fast + debug layer / fake_detail |
+| **`source-cli repair`** | Live oneshot/batch: gate → diagnose → patch → save/verify |
 | **`source-cli repair-dry`** | Mem ports + adapters; no MCP writes（冒烟） |
 | **`source-cli gate`** / `source_gate_rs.py` | L0(/L1/L2) classify |
+| **`source-cli probe` / `migrate` / `hunt` / `progress` / `ledger`** | Probe forms, domain migrate/hunt, queue, session ledger |
+| `repair_*.py` shims | Same flags → `source-cli` (`REPAIR_USE_PYTHON=1` = legacy) |
 | `repair_wait.py` | Dynamic poll `finished/total`; page all results; harvest fail-fast timeout |
-| `repair_harvest.py` | Batch verify tagged fails (cheap wins) |
-| `repair_progress.py` | fixed/skip/remaining + next |
-| `repair_diagnose.py` | layer-first diagnose |
-| `repair_rule_smells.py` | webView quotes + empty-tocUrl tip |
-| `repair_debug_parse.py` | fake_detail logic |
-| `repair_deep_loop.py` | **oneshot / batch** 深修自动补丁 + 流式 REPORT（Python 路径） |
+| `repair_harvest.py` | Batch verify tagged fails (cheap wins) — orchestration |
 | `repair_serial.py` | respondTime 队列串行 + `require_patch` + retro |
 | `repair_refresh_phone_index.py` | MCP list_sources → phone index（存在性 SOT） |
 | `repair_rt_queue.py` | phone index + RT 排序；搜索标签；1 host 1 源 |
 | `repair_retro.py` | 每源反思 JSONL（trap / harness / script_fix） |
-| `repair_search_probe.py` | forms + **common paths** + **score/rank** + **JS data-api** → best searchUrl |
-| `repair_wave.py` | triage |
-| `repair_patches.py` | smells + webView auto |
-| `repair_session_log.py` | ledger |
+| `repair_wave.py` | triage（单源调 `source-cli repair`） |
+| `mcp_discover.py` / `parity_*` | MCP discover + parity harness（长期 Python） |

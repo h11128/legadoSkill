@@ -9,6 +9,9 @@ members = [
   "source-cache",
   "source-probe",
   "source-patch",
+  "source-migrate",
+  "source-hunt",
+  "source-diagnose",
   "source-spine",
   "source-cli",
   "source-mcp",
@@ -34,6 +37,9 @@ source_gate = { path = "source-gate" }
 source_cache = { path = "source-cache" }
 source_probe = { path = "source-probe" }
 source_patch = { path = "source-patch" }
+source_migrate = { path = "source-migrate" }
+source_hunt = { path = "source-hunt" }
+source_diagnose = { path = "source-diagnose" }
 source_spine = { path = "source-spine" }
 source_mcp = { path = "source-mcp" }
 source_identify = { path = "source-identify" }

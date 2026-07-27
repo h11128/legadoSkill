@@ -507,4 +507,27 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        ap.add_argument("--mode", choices=("oneshot", "batch"), required=True)
+        ap.add_argument("--url", default="")
+        ap.add_argument("--migrate-to", default="")
+        ap.add_argument("--urls-file", default="")
+        ap.add_argument("--limit", type=int, default=15)
+        ap.add_argument("--timeout-ms", type=int, default=20_000)
+        ap.add_argument("--out", default="temp/full_fix/deep_loop_last.json")
+        args = ap.parse_args()
+        # migrate-to still needs Python path
+        if args.migrate_to:
+            raise SystemExit(main())
+        extra = ["repair", "--mode", args.mode, "--limit", str(args.limit)]
+        if args.url:
+            extra.extend(["--url", args.url])
+        if args.urls_file:
+            extra.extend(["--urls-file", args.urls_file])
+        raise SystemExit(run_source_cli(extra))
     raise SystemExit(main())

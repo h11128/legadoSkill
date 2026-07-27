@@ -521,3 +521,45 @@ def probe_search_forms(
             if prefer.get("from") != "common_path":
                 out["search_endpoint_ok"] = True
     return out
+
+
+if __name__ == "__main__":
+    import argparse
+    import os
+    import sys
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        # Offline HTML probe via Rust; network form probe still needs REPAIR_USE_PYTHON=1
+        from pathlib import Path
+
+        _SCRIPTS = Path(__file__).resolve().parent
+        if str(_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_SCRIPTS))
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(
+            description="Probe search forms (Rust offline). For live fetch set REPAIR_USE_PYTHON=1."
+        )
+        ap.add_argument("--base-url", required=True)
+        ap.add_argument("--html-file", required=True)
+        ap.add_argument("--key", default="我的")
+        args = ap.parse_args()
+        raise SystemExit(
+            run_source_cli(
+                [
+                    "probe",
+                    "--base-url",
+                    args.base_url,
+                    "--html-file",
+                    args.html_file,
+                    "--key",
+                    args.key,
+                ]
+            )
+        )
+    print(
+        "repair_search_probe: library module; CLI offline probe needs --base-url/--html-file "
+        "or REPAIR_USE_PYTHON=1 for legacy network probe helpers",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)

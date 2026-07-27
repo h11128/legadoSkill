@@ -1,9 +1,9 @@
-//! Gate early-exit / channel-busy helpers for oneshot (keep oneshot.rs under 300).
+//! Gate early-exit / diagnose-skip / channel-busy helpers for oneshot.
 
 use source_ports::{Clock, LedgerPort};
 use source_types::{
-    Capability, ErrorKind, GateAction, GateResult, LedgerRow, LedgerStep, MigrateTarget, PortError,
-    RepairContext, ReportJson, ReportStatus,
+    Capability, DiagnoseResult, ErrorKind, GateAction, GateResult, Layer, LedgerRow, LedgerStep,
+    MigrateTarget, PortError, RepairContext, ReportJson, ReportStatus,
 };
 
 use crate::error::SpineError;
@@ -94,6 +94,37 @@ pub(crate) fn migrated_gate(
     })
 }
 
+pub(crate) fn diagnose_skip_result(
+    ctx: &RepairContext,
+    gate: GateResult,
+    diag: &DiagnoseResult,
+) -> Result<OneshotResult, SpineError> {
+    let msg = diag
+        .fail_msg
+        .clone()
+        .unwrap_or_else(|| format!("diagnose layer={}", layer_str(diag.layer)));
+    let mut report = ReportJson::new(
+        ctx.capability,
+        ctx.mode,
+        gate.url.clone(),
+        ReportStatus::Skipped,
+        msg,
+    );
+    report.family = Some(ctx.family.clone());
+    report.layer = Some(diag.layer);
+    let report_line = emit_report_json(&report)?;
+    Ok(OneshotResult {
+        report,
+        report_line,
+        exit_code: 0,
+        apply: None,
+        gate,
+    })
+}
+
+/// Diagnose said layer=ok: verify only (no adapter). Claim fixed only on device success.
+pub(crate) use crate::oneshot_ok::diagnose_ok_verify;
+
 pub(crate) fn unrepairable_result(
     ctx: &RepairContext,
     gate: GateResult,
@@ -169,4 +200,16 @@ pub(crate) fn ledger_gate<L: LedgerPort, K: Clock>(
     }
     ledger.append(&row)?;
     Ok(())
+}
+
+fn layer_str(layer: Layer) -> &'static str {
+    match layer {
+        Layer::Search => "search",
+        Layer::Toc => "toc",
+        Layer::Content => "content",
+        Layer::Explore => "explore",
+        Layer::FileDownload => "file_download",
+        Layer::Ok => "ok",
+        Layer::Skip => "skip",
+    }
 }

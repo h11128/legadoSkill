@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Apply known auto-patches from rule smells (minimal, safe defaults)."""
+"""Apply known auto-patches from rule smells (minimal, safe defaults).
+
+Auto patches also live in Rust `source_patch::auto` and are applied by `source-cli repair`.
+Keep this module as the importable Python library surface for parity / glue.
+"""
 
 from __future__ import annotations
 
@@ -93,3 +97,15 @@ def patch_plan(source: dict[str, Any]) -> dict[str, Any]:
             "concurrentRate": patched.get("concurrentRate"),
         },
     }
+
+
+
+if __name__ == "__main__":
+    import sys
+
+    print(
+        "repair_patches: library only — auto patches run via `source-cli repair` "
+        "(source_patch::auto). Import apply_auto_patches for Python callers.",
+        file=sys.stderr,
+    )
+    raise SystemExit(0)

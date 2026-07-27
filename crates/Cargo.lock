@@ -1296,8 +1296,12 @@ dependencies = [
  "serde_json",
  "source_adapters",
  "source_cache",
+ "source_contracts",
+ "source_diagnose",
  "source_gate",
+ "source_hunt",
  "source_mcp",
+ "source_migrate",
  "source_patch",
  "source_ports",
  "source_probe",
@@ -1330,6 +1334,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "source_diagnose"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "source_ports",
+ "source_types",
+]
+
+[[package]]
 name = "source_gate"
 version = "0.1.0"
 dependencies = [
@@ -1339,6 +1354,17 @@ dependencies = [
  "source_types",
  "thiserror",
  "ureq",
+ "url",
+]
+
+[[package]]
+name = "source_hunt"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "source_types",
+ "thiserror",
  "url",
 ]
 
@@ -1368,11 +1394,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "source_migrate"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "source_types",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "source_patch"
 version = "0.1.0"
 dependencies = [
+ "regex",
  "serde",
  "serde_json",
+ "source_types",
  "thiserror",
 ]
 
@@ -1406,6 +1446,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "url",
 ]
 
 [[package]]

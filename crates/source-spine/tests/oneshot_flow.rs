@@ -4,8 +4,8 @@ use source_ports::SourceRepository;
 use source_spine::fakes::{BusyChannel, FixedClock, IdleChannel, MemLedger, MemRepo, MemVerify};
 use source_spine::{
     emit_report_json, idempotency_key, run_repair_oneshot, ApplyService, GateInput,
-    IdempotencyStore, MemoryIdempotency, NoopRepairPlugin, PlanOrPlugin, RepairContext,
-    RepairPorts, REPORT_JSON_PREFIX,
+    DiagnoseInput, IdempotencyStore, MemoryIdempotency, NoopRepairPlugin, PlanOrPlugin,
+    RepairContext, RepairPorts, REPORT_JSON_PREFIX,
 };
 use source_types::{
     BookSource, Capability, GateAction, GateResult, PatchOp, PatchPlan, ReportStatus, SiteFamily,
@@ -176,6 +176,7 @@ fn channel_busy_maps_to_exit_5() {
         PlanOrPlugin::Plan(sample_plan(url)),
         GateInput::Injected(gate),
         None,
+        DiagnoseInput::None,
         None,
     )
     .unwrap();
@@ -208,6 +209,7 @@ fn gate_skip_emits_skipped_report() {
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
         None,
+        DiagnoseInput::None,
         None,
     )
     .unwrap();
@@ -248,6 +250,7 @@ fn gate_migrate_early_exits_without_apply() {
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
         None,
+        DiagnoseInput::None,
         None,
     )
     .unwrap();
@@ -286,6 +289,7 @@ fn noop_plugin_returns_skipped_unrepairable() {
         PlanOrPlugin::Plugin(&NoopRepairPlugin),
         GateInput::Injected(gate),
         None,
+        DiagnoseInput::None,
         None,
     )
     .unwrap();
@@ -363,6 +367,7 @@ fn registry_plugin_with_form_html_proposes_search_url() {
         PlanOrPlugin::Plugin(&plugin),
         GateInput::Injected(gate),
         Some(&reg),
+        DiagnoseInput::None,
         None,
     )
     .unwrap();
@@ -416,6 +421,7 @@ fn registry_unknown_identify_without_html_is_unrepairable() {
         PlanOrPlugin::Plugin(&plugin),
         GateInput::Injected(gate),
         Some(&reg),
+        DiagnoseInput::None,
         None,
     )
     .unwrap();

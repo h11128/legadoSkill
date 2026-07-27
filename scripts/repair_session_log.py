@@ -73,4 +73,45 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+    import sys
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        # Prefer Rust for append/show; keep library append_row for imports.
+        argv = sys.argv[1:]
+        if not argv:
+            raise SystemExit(main())
+        cmd = argv[0]
+        extra: list[str] = ["ledger", cmd]
+        # Re-parse lightly
+        ap = argparse.ArgumentParser(description=__doc__)
+        sub = ap.add_subparsers(dest="cmd", required=True)
+        a = sub.add_parser("append")
+        a.add_argument("--url", default="")
+        a.add_argument("--step", required=True)
+        a.add_argument("--result", required=True)
+        a.add_argument("--note", default="")
+        a.add_argument("--waste", default="")
+        a.add_argument("--ledger", default=str(DEFAULT))
+        s = sub.add_parser("show")
+        s.add_argument("--tail", type=int, default=15)
+        s.add_argument("--ledger", default=str(DEFAULT))
+        args = ap.parse_args()
+        if args.cmd == "show":
+            raise SystemExit(run_source_cli(["ledger", "show", "--limit", str(args.tail)]))
+        extra = [
+            "ledger",
+            "append",
+            "--url",
+            args.url or "https://invalid.local/",
+            "--step",
+            args.step,
+            "--result",
+            args.result,
+        ]
+        if args.note:
+            extra.extend(["--note", args.note])
+        raise SystemExit(run_source_cli(extra))
     raise SystemExit(main())

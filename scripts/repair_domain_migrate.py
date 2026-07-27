@@ -194,4 +194,34 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        ap.add_argument("--from-url", required=True)
+        ap.add_argument("--to-url", required=True)
+        ap.add_argument("--verify", action="store_true")
+        ap.add_argument("--keyword", default="我的")
+        ap.add_argument("--enable", action="store_true")
+        ap.add_argument("--dry-run", action="store_true")
+        ap.add_argument("--keep-old", action="store_true")
+        ap.add_argument("--out", default="temp/full_fix/domain_migrate.json")
+        args = ap.parse_args()
+        extra = [
+            "migrate",
+            "--from-url",
+            args.from_url,
+            "--to-url",
+            args.to_url,
+        ]
+        if args.dry_run:
+            extra.append("--dry-run")
+        if args.keep_old:
+            extra.append("--keep-old")
+        # --verify/--enable still Python path for now
+        if args.verify or args.enable:
+            raise SystemExit(main())
+        raise SystemExit(run_source_cli(extra))
     raise SystemExit(main())

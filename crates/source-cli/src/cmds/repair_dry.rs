@@ -9,7 +9,7 @@ use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
 use source_gate::{classify_one_l0, load_rules};
 use source_spine::fakes::{FixedClock, IdleChannel, MemLedger, MemRepo, MemVerify};
 use source_spine::{
-    run_repair_oneshot, GateInput, PlanOrPlugin, RepairPorts,
+    run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts,
 };
 use source_types::{BookSource, SourceKey, Url};
 
@@ -117,6 +117,7 @@ pub fn run_repair_dry(args: RepairDryArgs) -> ExitCode {
         PlanOrPlugin::Plugin(&plugin),
         GateInput::Injected(gate),
         Some(&reg),
+        DiagnoseInput::None,
         None,
     ) {
         Ok(r) => r,

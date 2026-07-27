@@ -1,8 +1,8 @@
-//! Family / repair plugin traits + IdentifyPort (§14.2–14.3).
+//! Family / repair plugin traits + IdentifyPort + DiagnosePort (§14.2–14.3).
 
 use source_types::{
-    AdapterOutcome, BookSource, FingerprintRule, IdentifyResult, OptimizePlan, PatchPlan,
-    RepairConfig, RepairContext, SiteFamily, Url,
+    AdapterOutcome, BookSource, DiagnoseResult, FingerprintRule, IdentifyResult, OptimizePlan,
+    PatchPlan, RepairConfig, RepairContext, SiteFamily, Url,
 };
 
 /// Minimal family identity for adapter registry (§14.3).
@@ -35,4 +35,15 @@ pub trait IdentifyPort {
         html: &str,
         config: &RepairConfig,
     ) -> IdentifyResult;
+}
+
+/// Layer diagnose without coupling spine → diagnose crate (§14.2).
+pub trait DiagnosePort {
+    fn diagnose(
+        &self,
+        url: Url,
+        source: &BookSource,
+        debug_text: &str,
+        fail_msg: Option<&str>,
+    ) -> DiagnoseResult;
 }

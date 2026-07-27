@@ -15,7 +15,7 @@ pub use clock::Clock;
 pub use html_fetch::HtmlFetchPort;
 pub use ledger::LedgerPort;
 pub use plugin::{
-    CreatePlugin, FamilyPlugin, IdentifyPort, OptimizePlugin, RepairPlugin,
+    CreatePlugin, DiagnosePort, FamilyPlugin, IdentifyPort, OptimizePlugin, RepairPlugin,
 };
 pub use source_repo::SourceRepository;
 pub use verify::VerifyPort;

@@ -400,4 +400,23 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        p = argparse.ArgumentParser(description=__doc__)
+        p.add_argument("--url", action="append", default=[])
+        p.add_argument("--urls-file")
+        p.add_argument("--rules", default=str(DEFAULT_RULES))
+        p.add_argument("--concurrency", type=int, default=32)
+        p.add_argument("--l2-timeout", type=float, default=4.0)
+        p.add_argument("--out")
+        p.add_argument("--l0-only", action="store_true")
+        args = p.parse_args()
+        if len(args.url) == 1 and not args.urls_file:
+            extra = ["gate", "--url", args.url[0], "--rules", args.rules]
+            if args.l0_only:
+                extra.append("--l0-only")
+            raise SystemExit(run_source_cli(extra))
     raise SystemExit(main())

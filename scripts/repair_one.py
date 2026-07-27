@@ -289,6 +289,42 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        ap.add_argument("--url", required=True)
+        ap.add_argument("--fail-msg", default="")
+        ap.add_argument("--keyword", default="我的")
+        ap.add_argument("--mcp", default="")
+        ap.add_argument("--token", default="")
+        ap.add_argument("--out-dir", default="")
+        ap.add_argument("--index", default="")
+        ap.add_argument("--apply", action="store_true", default=True)
+        ap.add_argument("--no-apply", action="store_true")
+        ap.add_argument("--no-verify", action="store_true")
+        ap.add_argument("--timeout-ms", type=int, default=20_000)
+        args = ap.parse_args()
+        extra = [
+            "repair",
+            "--mode",
+            "oneshot",
+            "--url",
+            args.url,
+            "--key",
+            args.keyword,
+        ]
+        if args.no_verify:
+            extra.append("--no-verify")
+        if args.no_apply:
+            extra.append("--dry-run")
+        try:
+            raise SystemExit(run_source_cli(extra))
+        except (urllib.error.URLError, RuntimeError, OSError, json.JSONDecodeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            raise SystemExit(1)
     try:
         raise SystemExit(main())
     except (urllib.error.URLError, RuntimeError, OSError, json.JSONDecodeError) as exc:

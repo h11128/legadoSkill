@@ -27,3 +27,7 @@ source_ports = { workspace = true }
 source_spine = { workspace = true }
 source_adapters = { workspace = true }
 source_mcp = { workspace = true }
+source_diagnose = { workspace = true }
+source_migrate = { workspace = true }
+source_hunt = { workspace = true }
+source_contracts = { workspace = true }

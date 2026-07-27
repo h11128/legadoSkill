@@ -128,4 +128,19 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    import os
+
+    if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from source_cli_shim import run_source_cli
+
+        ap = argparse.ArgumentParser(description=__doc__)
+        ap.add_argument("--url", action="append", default=[])
+        ap.add_argument("--candidate", action="append", default=[])
+        ap.add_argument("--seeds", default=str(SEEDS))
+        ap.add_argument("--out", default="temp/full_fix/domain_hunt.json")
+        args = ap.parse_args()
+        if len(args.url) == 1 and not args.candidate:
+            raise SystemExit(
+                run_source_cli(["hunt", "--url", args.url[0], "--seeds", args.seeds])
+            )
     raise SystemExit(main())

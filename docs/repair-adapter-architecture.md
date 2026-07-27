@@ -10,14 +10,14 @@ Spec anchors in this doc: **§3 types**, **§8 contracts**, **§9 database**, **
 
 ## 0. Operational rule (dual-path)
 
-**Prefer Rust `source-cli` for gate / oneshot repair when the binary is available.** Python `scripts/*.py` remain valid until an explicit §12 cutover sign-off (live-smoke + §12.6 perf).
+**§12 functional parity (口径 A) is green:** algorithm cores live in Rust (`source-diagnose` / `source-probe` / `source-patch` / `source-migrate` / `source-hunt` + spine). Prefer **`source-cli`** for diagnose / gate / repair / migrate / hunt / progress / ledger. Python `scripts/repair_*.py` are thin shims (same flags → `source-cli`) unless `REPAIR_USE_PYTHON=1`.
 
-| Prefer now | Still OK | Do not claim yet |
-|------------|----------|------------------|
-| `source-cli gate`, `repair`, `repair-dry`, `video-route` | `repair_deep_loop.py`, `repair_one.py`, progress/queue/MCP glue | Full cutover / “Python deprecated” without §12.3+§12.6 |
-| Skill documents both paths (Rust first) | Improve Python shims that call Rust | Abandon working Python mid-session without parity |
+| Prefer now | Still OK (orchestration) | Do not claim yet |
+|------------|--------------------------|------------------|
+| `source-cli diagnose`, `gate`, `repair` (`--mode oneshot\|batch`), `probe`, `migrate`, `hunt`, `progress`, `ledger` | `mcp_discover`, `parity_*`, `repair_harvest`, `repair_wave` (wave calls Rust single-source), bulk runners | **§12.6 perf cutover** / “delete Python” without PERF_BASELINE |
+| Skill defaults to `source-cli`; shims keep script names | Library imports of Python helpers for glue | Claiming fixed without device verify |
 
-**Implementation language:** core libraries ship in **Rust** (`crates/`); adapters are **wired into spine oneshot**. Python remains MCP glue + batch/queue until cutover. See §14 + §11.7.
+**Cutover still waits §12.6.** Functional sign-off: `docs/parity/ACCEPTANCE_LOG.md`. See §14 + §11.7.
 
 ---
 
@@ -1136,14 +1136,15 @@ Status codes: `shim` = thin wrapper; `lib` = library-only re-export; `keep` = st
 | `video_repair_one.py` | smell + one-shot skeleton | `source_video` | `--help` + dry |
 | `debugger/*` | analyze_rule/url CLI paths | `source_parse` wrap | existing debugger tests still pass |
 | `parity_inventory.py` | script inventory write/check vs §12.2 | keep | `--write` + `--check` (warn-only default) |
-| `parity_selftest.py` | fixtures/cli-help/imports/schemas/inventory suites | keep | `python scripts/parity_selftest.py` exit 0 |
+| `parity_selftest.py` | fixtures/cli-help/imports/schemas/inventory/rust-cli suites | keep | `python scripts/parity_selftest.py` exit 0 |
+| `parity_rust_suite.py` | Rust CLI golden (diagnose/probe/migrate/hunt/gate) | keep | imported by selftest `--suite rust-cli` |
 | `repair_retro.py` | per-source retro JSONL append | keep | `--help` + append dry |
 | `repair_rt_queue.py` | respondTime queue build | keep | `--help` / dry build |
 | `repair_serial.py` | serial oneshot from RT queue | keep/shim→spine | `--help` + dry limit |
 | `source_gate_rs.py` | thin shim → `source-cli gate` | keep | `--help` + L0-only default |
 | `repair_refresh_phone_index.py` | refresh phone source index helper | keep | `--help` |
 
-**46/46 scripts** must appear above. If a new script is added, update this matrix in the same PR.
+**47/47 scripts** must appear above. If a new script is added, update this matrix in the same PR.
 
 ### 12.3 Acceptance procedure (run in order)
 

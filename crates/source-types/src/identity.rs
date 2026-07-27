@@ -127,8 +127,17 @@ impl BookSource {
         &self.0
     }
 
+    pub fn as_value_mut(&mut self) -> &mut Value {
+        &mut self.0
+    }
+
     pub fn into_value(self) -> Value {
         self.0
+    }
+
+    /// Run `f` on the inner JSON and return its result (e.g. change labels).
+    pub fn mutate_with<R>(&mut self, f: impl FnOnce(&mut Value) -> R) -> R {
+        f(&mut self.0)
     }
 
     pub fn source_key(&self) -> Option<SourceKey> {
