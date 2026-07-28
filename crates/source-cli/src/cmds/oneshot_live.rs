@@ -11,7 +11,7 @@ use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
 use source_diagnose::ParseDiagnosePort;
 use source_gate::{classify_one_l0, load_rules};
 use source_mcp::{
-    FsChannelPort, JsonlLedgerPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort,
+    DualLedgerPort, FsChannelPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort,
 };
 use source_ports::{ChannelPort, Clock, DiagnosePort, HtmlFetchPort, SourceRepository};
 use source_spine::{
@@ -204,7 +204,7 @@ pub fn repair_one_url(
 
     let ctx = builder.build();
     let verify = McpVerifyPort::new(Arc::clone(&client));
-    let ledger = match JsonlLedgerPort::from_defaults() {
+    let ledger = match DualLedgerPort::from_defaults() {
         Ok(l) => l,
         Err(e) => {
             eprintln!("repair: ledger: {e}");

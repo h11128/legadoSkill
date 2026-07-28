@@ -31,6 +31,27 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
 12. **After domain migrate**: fetch new search form HTML before verify.
 13. **If debug OK but check fails** (下载链接为空 / ~100ms): `repair_debug_vs_check.py` first
     (bookUrl → infoHtml trap).
+14. **After every source attempt (fixed / skip / fail), mandatory close-out loop** — do not
+    pick the next URL until these finish:
+    1. **Document**: short note in `docs/source-repair-retrospective.md` (or dated retro)
+       + `repair_session_log.py append` / `source-cli ledger`.
+    2. **Reflect**: `repair_retro.py append` with `trap` / `harness` / `script_fix` /
+       `skill_fix` filled honestly (what burned time, what the agent missed).
+    3. **Improve**: **only when novel trap or harness gap** — patch SKILL and/or code then.
+       Do **not** change skill/Rust if trap already in SKILL Traps table (skill_fix=0 is correct).
+       `repair_retro append` **validates trap at write**; `skill_fix=1` **auto-syncs** Cursor SKILL.
+       `progress next` **blocks** until `repair_closeout_check.py pending` passes
+       (see `docs/repair-closeout-gate.md`). Skipping doc/retro is a process failure;
+       skipping skill/Rust on **known** traps is **correct**.
+17. **Structural close-out** — enforced by code, not prose alone:
+    - `repair_retro.py append` rejects invalid trap/skill_fix
+    - `repair_progress.py next` / `source-cli progress next` call `pending` first
+    - Do not force skill/Rust on `known:…` or existing SKILL traps
+15. **Never pass `--l0-only` on live progress / diagnose / repair.** L0-only skips L2 dead/wall
+    sniff and burns phone/probe time on dead hosts (dcrsu 2026-07-27). Use full gate.
+16. **If site search API is empty but browse still works:** **disable** by default. Do **not**
+    fake search by filtering homepage/榜单 HTML. Optional Bing/Google `site:host {{key}}` is
+    experimental only (see KB `ddxsmf`); not the default repair path.
 
 ## Types (do not confuse)
 
@@ -50,10 +71,16 @@ python scripts/repair_wave.py --urls-file urls.txt   # parallel PC patch + one b
 # or single:
 python scripts/repair_one.py --url … --fail-msg …
 python scripts/repair_session_log.py append --url … --step check --result '…'
+python scripts/repair_retro.py append --url … --status fixed|skip|fail --msg '…' \
+  --trap '…' --harness '…' --script-fix '…' --skill-fix 1
+python scripts/repair_closeout_check.py pending   # progress next 自动调用
+python scripts/repair_closeout_check.py gate --trap … --skill-fix …
+# then edit skill / Rust|Python only if trap is novel or harness gap is real
 ```
 
 Python scripts remain valid until §12 cutover; prefer `source-cli` for gate/oneshot when the bin is built.
 
 Cache: `temp/full_fix/cache/`. MCP: `config/mcp_defaults.json`.  
 Ledger: `temp/full_fix/repair_session_ledger.jsonl`.  
-Retros: `docs/source-repair-retrospective.md`, `docs/source-repair-retro-migrate-video-2026-07-26.md`.
+Retros: `docs/source-repair-retrospective.md`, `docs/source-repair-retro-migrate-video-2026-07-26.md`,
+`temp/full_fix/repair_serial_retro.jsonl`.

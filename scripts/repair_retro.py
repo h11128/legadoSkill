@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from repair_closeout import gate_trap, sync_skill_to_cursor
+
 _ROOT = Path(__file__).resolve().parents[1]
 DEFAULT = _ROOT / "temp" / "full_fix" / "repair_serial_retro.jsonl"
 
@@ -65,7 +67,21 @@ def main() -> int:
                 row.update(extra)
         except json.JSONDecodeError:
             pass
+    trap = str(row.get("trap") or "").strip()
+    skill_fix = bool(row.get("skill_fix"))
+    if trap:
+        ok, errs = gate_trap(trap, skill_fix=skill_fix)
+        if not ok:
+            for e in errs:
+                print(f"repair_retro BLOCK: {e}", flush=True)
+            return 1
     append_retro(Path(args.out), row)
+    if skill_fix:
+        sync_ok, sync_msg = sync_skill_to_cursor()
+        if sync_ok:
+            print(f"synced SKILL → {sync_msg}")
+        else:
+            print(f"warn: skill sync failed: {sync_msg}", flush=True)
     print(json.dumps(row, ensure_ascii=False))
     return 0
 

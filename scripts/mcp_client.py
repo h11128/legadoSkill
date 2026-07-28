@@ -183,8 +183,25 @@ def parse_json_text(text: str) -> Any:
     return {"raw": text}
 
 
-def get_source(mcp_url: str, token: str, book_source_url: str) -> dict[str, Any]:
-    """Fetch source; retry trimmed / spaced / hash-stripped variants."""
+def get_source(
+    mcp_url: str,
+    token: str,
+    book_source_url: str,
+    *,
+    use_cache: bool = True,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    """Fetch source; retry trimmed variants; prefer SQLite snapshot when TTL-fresh."""
+    import os
+
+    from repair_db import get_source_snapshot, load_cfg, upsert_source_snapshot, connect
+
+    if use_cache and not force_refresh and os.environ.get("REPAIR_SKIP_PHONE_CACHE", "") != "1":
+        cached = get_source_snapshot(book_source_url, cfg=load_cfg())
+        if cached and isinstance(cached, dict) and cached.get("bookSourceUrl"):
+            cached["_cache_hit"] = True
+            return cached
+
     candidates = [book_source_url]
     trimmed = book_source_url.strip()
     if trimmed and trimmed not in candidates:
@@ -202,9 +219,22 @@ def get_source(mcp_url: str, token: str, book_source_url: str) -> dict[str, Any]
         last_raw = raw
         data = parse_json_text(raw)
         if isinstance(data, dict) and "bookSourceUrl" in data:
+            try:
+                with connect(load_cfg()) as conn:
+                    upsert_source_snapshot(conn, data)
+            except Exception:
+                pass
+            data["_cache_hit"] = False
             return data
         if isinstance(data, dict) and isinstance(data.get("data"), dict):
-            return data["data"]
+            src = data["data"]
+            try:
+                with connect(load_cfg()) as conn:
+                    upsert_source_snapshot(conn, src)
+            except Exception:
+                pass
+            src["_cache_hit"] = False
+            return src
     raise RuntimeError(f"unexpected get_source payload: {last_raw[:300]}")
 
 
@@ -217,7 +247,7 @@ def save_source(
     preserve_group: bool = True,
 ) -> str:
     payload = json.dumps(source, ensure_ascii=False, separators=(",", ":"))
-    return extract_text(
+    msg = extract_text(
         tools_call(
             mcp_url,
             token,
@@ -230,6 +260,14 @@ def save_source(
             timeout=180.0,
         )
     )
+    try:
+        from repair_db import connect, load_cfg, upsert_source_snapshot
+
+        with connect(load_cfg()) as conn:
+            upsert_source_snapshot(conn, source)
+    except Exception:
+        pass
+    return msg
 
 
 def disable_source(mcp_url: str, token: str, source: dict[str, Any], tag: str = "网站失效") -> str:

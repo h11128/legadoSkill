@@ -18,7 +18,9 @@ pub use endpoint::McpEndpoint;
 pub use fakes::{
     MemChannelGuard, MemChannelPort, MemClock, MemLedgerPort, MemSourceRepository, MemVerifyPort,
 };
-pub use ledger::{default_jsonl_path, DualLedgerPort, JsonlLedgerPort, SqliteLedgerPort};
+pub use ledger::{
+    default_jsonl_path, default_sqlite_path, DualLedgerPort, JsonlLedgerPort, SqliteLedgerPort,
+};
 pub use root::repo_root;
 pub use source_repo::{url_candidates, McpSourceRepository};
 pub use verify::McpVerifyPort;

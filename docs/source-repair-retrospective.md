@@ -162,10 +162,151 @@ If another session burns 15+ minutes on a one-line tocUrl bug, failure mode is *
 | Fake `fixed` | Script | `log --status fixed` refuses without verify `success=true` |
 | Channel contention | Script | `mcp_channel.py`; verify asserts idle; bulk runner acquires lock |
 | Stale MCP IP | Config | `config/mcp_defaults.json` SOT |
-| Ad-hoc inspect_* | Hook + MDC | beforeShell prompt; `book-source-repair-discipline.mdc`; audit warn |
-| Subagent cold start | Doc | `docs/FIX_AGENT_PROMPT.md` |
-| Infra underuse | Skill + MDC | Mandatory docs + repair CLI |
+| Ad-hoc inspect_* | Hook + MDC | beforeShell prompt; discipline mdc |
+| Subagent cold start | Script | **`repair_one.py` one-shot** + `FIX_AGENT_PROMPT.md` |
+| Infra underuse | Script | **`repair_knowledge.py`** searches docs/assets |
+| Auto fix smells | Script | **`repair_patches.py`** clear tocUrl / split \|\|`##` |
+| URL class | Script | **`repair_classify.py`** homepage/content/catalog |
+| Host search gap | Script | **EWMA in `repair_cache.py`** + verify `--auto-cooldown` |
+| Queue priority | Script | **`repair_queue.py`** |
+| HTML refetch | Script | **HTML cache** under `temp/full_fix/cache/` |
+| Disable dead | Script | `repair_one` decision=disable → `disable_source` |
 | 15 min as target | MDC + Skill | Target 2–5 / hard stop 10 |
-| No ledger | Script | `log --index` + `index` subcommand |
-| Parallel fix agents | MDC + prompt | Explicit ban |
+| Ledger | Script | `log --index` / repair_one writes index |
+
+Default command: `python scripts/repair_one.py --url … --fail-msg …`
+
+
+
+
+## Follow-up retro (migrate/video evening)
+
+See `docs/source-repair-retro-migrate-video-2026-07-26.md` and phase log `docs/source-repair-session-phase-migrate-video-2026-07-26.md`.
+
+---
+
+## 10. Missed alicesw search (2026-07-26 night)
+
+**Why the agent missed it earlier**
+
+1. **L2 used to treat HTTP 200 as alive** (HEAD, almost no body) → parked / redirected hosts looked “fine”; migrate to `www.alicesw.com` was delayed until body-sniff + host-redirect landed.
+2. **`repair_search_probe` trusted the first homepage form** → empty-action `keyword` form became `/?keyword={{key}}`, which returns the **homepage shell** (looks “found”, scores as search candidate, zero real books).
+3. **No common-path fallback / no live score** → never tried `/search.php?q=` (xunsearch) until a human said “alice 有搜索”.
+4. **xunsearch hrefs are `javascript:…pid: N`** → first HTML scrape reported “no bookish links”, easy to mis-skip as broken search.
+
+**Mitigations shipped**
+
+| Gap | Fix |
+|-----|-----|
+| Fake form candidate | `score_search_html` + `rank_candidates` (penalize same-title-as-home) |
+| Missed endpoint | `COMMON_GET_TEMPLATES` includes `/search.php?q=` etc. |
+| pid JS links | `bookUrl_hint` → `##pid:(\\d+)##/novel/$1.html###` |
+| Agent guidance | skill traps: 假首页搜索 / xunsearch pid；diagnose `best` + signals |
+
+Proof: `PYTHONPATH=scripts python -c "from repair_search_probe import probe_search_forms; print(probe_search_forms('https://www.alicesw.com/', keyword='重生')['best'])"`
+
+---
+
+## 11. Standing close-out (2026-07-27)
+
+User preference locked into discipline + skill: **after every URL** → document (`docs/…` + ledger) → `repair_retro.py` → patch skill/code if new trap → only then next URL.
+
+## 12. biduju content empty (2026-07-27)
+
+| Signal | Cause | Fix |
+|--------|-------|-----|
+| debug OK search/toc; `ContentEmptyException` / check「搜索正文失效」 | `ruleContent.content=class.chapter@textNodes` on chapter HTML that uses `<br/>` + nested `<font>` | `class.chapter@html` |
+| diagnose briefly said `layer=ok` while check failed | debug path can look “complete” if content flake; trust check tag + re-debug | prefer fail_msg `搜索正文` → content; re-debug when check≠debug |
+
+## 13. jinyongwang domain repurposed (2026-07-27)
+
+| Signal | Cause | Fix |
+|--------|-------|-----|
+| diagnose `layer=search` / fake_detail; form `keywords` | Domain still 200 but title=「安盛风机…专业生产厂家」; product search shell | **skip/disable** — not a novel site |
+| `forms_js` panic on Chinese HTML | byte window slice mid-codepoint | `utf8_window` in `forms_js.rs` |
+| `progress next` stuck on `api.xingliang…` | URL alpha + phone index 无 RT；queue 字段是 `items` | progress 优先读 `repair_serial100_queue.json` 的 `items` |
+| L2 missed | no industrial-shell hints | `专业生产厂家` / `工业通风` / `请输入您要查询的产品` in sniff + prefilter |
+
+## 14. dcrsu L2 HTTP dead (2026-07-27)
+
+| Signal | Cause | Fix |
+|--------|-------|-----|
+| full `gate` → `l2_http_dead` / timeout 10060 | host dead (CF IP but no TCP reply) | **disable/skip** |
+| diagnose with `--l0-only` still ran tips/probe (~37s) | agent used L0-only on live pick path | skill+prompt: **ban `--l0-only`** for progress/diagnose/repair live |
+
+## 15. b483 jieqi search index empty (2026-07-27)
+
+| Signal | Cause | Decision |
+|--------|-------|----------|
+| POST/m 搜索恒 0 条；浏览/详情仍正常 | 服务端搜索索引空 | **disable**（用户偏好） |
+| 曾用 JS 拉 home/top/sort + contains(key) | 假搜索，覆盖面差、脏链 | **撤回** — 不算正经修法 |
+| Bing/Google `site:host key` | KB 有先例：顶点 `ddxsmf` → `cn.bing.com/search?q=site:…` | **延期**：见 `docs/engine-site-search-deferred.md`（Brave MCP / Serper 等）；有价值再做 |
+
+Proof of prior engine-search pattern: `assets/knowledge_base/book_sources/6875_顶点小说ddxsmf_书源_20260218_103244.md`.
+
+## 16. ihuaben app search dead → so HTML (2026-07-27)
+
+| Signal | Cause | Fix |
+|--------|-------|-----|
+| diagnose `layer=search` / fake_detail；`/app/search` → `{}` | 旧 Android 搜索 API 空壳；站点仍活 | **继续修** |
+| `so.ihuaben.com/search?keyword=` 62KB；`.searchresult`×30 | 真搜索在 so 子域 HTML | `searchUrl` 改 so；`bookList=.searchresult`；`h2 a` 书名/链接 |
+| 详情 HTML + `cdncn…/cdn/chapters/{id}` JSON 仍 200 | 目录/正文 API 未死 | 详情页 CSS bookInfo；`tocUrl` JS 抽 bookId → CDN；`ruleToc`/`ruleContent` 保持 JSON |
+| listv2 发现仍 OK | 勿动 explore（默认不修发现） | 仅修搜索层 |
+
+Proof: device verify `校验成功` ~3.5s（`checkDiscovery=false`）.
+
+## 17. Phone pull cache + repair_state.sqlite (2026-07-27)
+
+| Pain (this thread) | Cause | Fix |
+|--------|-------|-----|
+| `repair_refresh_phone_index` ~55s every serial batch | always `list_sources` 4719 rows via MCP | SQLite `source_snapshot` + `phone_pull_at`; TTL default 3600s (`config/repair_db_defaults.json`); `--force` to re-pull |
+| Repeated `get_source` per URL in oneshot | no PC cache of BookSource JSON | `mcp_client.get_source` reads TTL-fresh `source_snapshot`; `save_source` upserts; env `REPAIR_SKIP_PHONE_CACHE=1` bypass |
+| Ledger grep-only / progress re-read JSONL | no indexed store | dual-write JSONL + `ledger_events` via `repair_db.append_ledger_row` |
+| HTML/host_stats whole-file rewrite | race + no query | `repair_cache` still writes files; also upserts `html_cache_meta` / `host_stats` tables |
+
+**Ops:** `python scripts/repair_db_cli.py migrate|status|import-ledger|import-cache|export-phone-index`  
+**DB:** `temp/full_fix/repair_state.sqlite` (gitignored via `temp/`). Rust `source-cli ledger` + oneshot use `DualLedgerPort` (JSONL + SQLite). Python `scripts/repair_db.py` is the live access layer until §12 cutover.
+
+## 18. tybook.taoyuewenhua.net (2026-07-28)
+
+| Issue | Fix | Verify |
+|-------|-----|--------|
+| COS `chapters/{bid}.json` 403 | `tocUrl` → signed `/tf/chapter_list?` @js (mibook sign) | 校验成功 6411ms |
+
+## 19. yoduzw.com (2026-07-28)
+
+| Issue | Action | Verify |
+|-------|--------|--------|
+| POST `/sa` 200 but list=0 (all keywords/selectors); browse/category OK | **disable** (rule §16 search API dead) | 校验失败:搜索失效 → disabled |
+
+## 20. powanjuan.cc (2026-07-28)
+
+| Issue | Fix | Verify |
+|-------|-----|--------|
+| `tocUrl span.read a` → 首章 URL，`index/1.html` 目录空 | 清空 `tocUrl`，用详情页 `div.catalog` + 已有 `ruleToc` | 校验成功 4432ms（keyword=斗罗） |
+
+## 21. miao.qimao.com (2026-07-28)
+
+| Issue | Action |
+|-------|--------|
+| search/index Vue SSR 无 `ul.qm-pic-txt`；api-miao 无 search 端点 | **disable**（browse/shuku OK） |
+
+## 22. gaysay.com (2026-07-28)
+
+| Issue | Fix |
+|-------|-----|
+| 目录 `href` 全指向 `/book/id/`；真实 URL 在 `data-c8dcb4a` base64 | `chapterUrl` @js base64Decode；`chapterName` @data-cf3b593 |
+
+## 23. reader.browser.miui.com (2026-07-28)
+
+| Issue | Action |
+|-------|--------|
+| `/api/v2/search/word` phone list=0；PC 404；L2 body=0 | **disable** — 小米浏览器 App 内嵌 |
+
+## Close-out 标准（每轮）
+
+1. **诊断证据**：`diagnose` + phone `debug_source` / fetch → ledger + retro.msg  
+2. **反思**：`repair_retro.py append`（trap / harness / script_fix / **skill_fix 如实**）  
+3. **文档**：本节或 dated retro  
+4. **改进**：新 trap → patch SKILL + Rust/Python **再** next URL（2026-07-28 补：thread trap + `diagnose_tips.rs`）
 

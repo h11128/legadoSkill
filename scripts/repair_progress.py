@@ -186,9 +186,15 @@ def cmd_next(args: argparse.Namespace) -> int:
     """Pick one URL. L2-gate before return — skip walls/parked without diagnose."""
     from datetime import datetime, timezone
 
+    from repair_closeout import ensure_ready_for_next
     from repair_prefilter import DEFAULT_RULES, classify_one, load_rules
+    from repair_retro import DEFAULT as RETRO_PATH
+    from repair_retro import append_retro
     from repair_session_log import DEFAULT as LEDGER_PATH
     from repair_session_log import append_row
+
+    if ensure_ready_for_next() != 0:
+        return 1
 
     fixed = ledger_fixed()
     skipped = ledger_skipped()
@@ -196,6 +202,20 @@ def cmd_next(args: argparse.Namespace) -> int:
     rules = load_rules(DEFAULT_RULES) if Path(str(DEFAULT_RULES)).is_file() else []
     max_try = max(1, int(args.l2_tries))
     rejected: list[dict[str, Any]] = []
+
+    def auto_skip_retro(url: str, msg: str) -> None:
+        append_retro(
+            RETRO_PATH,
+            {
+                "url": url,
+                "status": "skip",
+                "msg": msg[:200],
+                "trap": "known:l2_gate",
+                "skill_fix": False,
+                "harness": "",
+                "script_fix": "",
+            },
+        )
 
     def candidates() -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -249,6 +269,7 @@ def cmd_next(args: argparse.Namespace) -> int:
                             "note": title[:80],
                         },
                     )
+                    auto_skip_retro(url, f"why_title_wall_or_parked: {title[:80]}")
                     skipped.add(url)
                     rejected.append({"url": url, "reason": "why_title_wall_or_parked"})
                     continue
@@ -288,6 +309,7 @@ def cmd_next(args: argparse.Namespace) -> int:
                     "note": "progress_next_l2_gate",
                 },
             )
+            auto_skip_retro(url, str(gate.get("reason") or act))
             skipped.add(url)
             rejected.append({"url": url, "reason": gate.get("reason"), "action": act})
             continue
@@ -338,8 +360,11 @@ if __name__ == "__main__":
     import os
 
     if os.environ.get("REPAIR_USE_PYTHON", "") != "1":
+        from repair_closeout import ensure_ready_for_next
         from source_cli_shim import run_source_cli
 
+        if ensure_ready_for_next() != 0:
+            raise SystemExit(1)
         ap = argparse.ArgumentParser(description=__doc__)
         sub = ap.add_subparsers(dest="cmd", required=True)
         s = sub.add_parser("status")

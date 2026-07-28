@@ -123,6 +123,9 @@ DEADISH_HINTS = (
     "此域名出售",
     "该域名",
     "出售域名",
+    "专业生产厂家",
+    "工业通风",
+    "请输入您要查询的产品",
 )
 # Soft walls: site "alive" but not repairable without human — skip, don't diagnose.
 WALL_HINTS = (

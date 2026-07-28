@@ -16,6 +16,27 @@ pub fn default_jsonl_path() -> Result<PathBuf, PortError> {
     Ok(repo_root()?.join("temp/full_fix/repair_session_ledger.jsonl"))
 }
 
+/// Default SQLite repair state (`config/repair_db_defaults.json` db_path).
+pub fn default_sqlite_path() -> Result<PathBuf, PortError> {
+    let root = repo_root()?;
+    let cfg_path = root.join("config/repair_db_defaults.json");
+    if cfg_path.is_file() {
+        if let Ok(raw) = std::fs::read_to_string(&cfg_path) {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                if let Some(p) = v.get("db_path").and_then(|x| x.as_str()) {
+                    let path = PathBuf::from(p);
+                    return Ok(if path.is_absolute() {
+                        path
+                    } else {
+                        root.join(path)
+                    });
+                }
+            }
+        }
+    }
+    Ok(root.join("temp/full_fix/repair_state.sqlite"))
+}
+
 /// Append-only JSONL ledger (Python `append_row` shape via `LedgerRow` serde).
 pub struct JsonlLedgerPort {
     path: PathBuf,
@@ -95,6 +116,13 @@ pub struct DualLedgerPort {
 impl DualLedgerPort {
     pub fn new(jsonl: JsonlLedgerPort, sqlite: SqliteLedgerPort) -> Self {
         Self { jsonl, sqlite }
+    }
+
+    pub fn from_defaults() -> Result<Self, PortError> {
+        Ok(Self::new(
+            JsonlLedgerPort::from_defaults()?,
+            SqliteLedgerPort::open(default_sqlite_path()?)?,
+        ))
     }
 }
 

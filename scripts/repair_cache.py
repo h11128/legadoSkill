@@ -70,6 +70,12 @@ def put_html(url: str, result: dict[str, Any]) -> None:
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     (HTML_DIR / f"{key}.bin").write_bytes(bytes(body))
+    try:
+        from repair_db import upsert_html_meta
+
+        upsert_html_meta(key, url, meta, f"html/{key}.bin")
+    except Exception:
+        pass
 
 
 def _load_hosts() -> dict[str, Any]:
@@ -85,6 +91,14 @@ def _load_hosts() -> dict[str, Any]:
 def _save_hosts(data: dict[str, Any]) -> None:
     _ensure()
     HOST_STATS.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        from repair_db import upsert_host_stats
+
+        for host, row in data.items():
+            if isinstance(row, dict):
+                upsert_host_stats(host, row)
+    except Exception:
+        pass
 
 
 def note_rate_limit(url: str, suggested_gap_s: float = 20.0) -> None:

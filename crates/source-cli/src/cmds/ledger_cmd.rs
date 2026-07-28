@@ -2,7 +2,7 @@
 
 use std::process::ExitCode;
 
-use source_mcp::{default_jsonl_path, JsonlLedgerPort};
+use source_mcp::{default_jsonl_path, DualLedgerPort};
 use source_ports::LedgerPort;
 use source_types::{LedgerRow, LedgerStep, Url};
 
@@ -17,7 +17,7 @@ pub enum LedgerCmd {
 }
 
 pub fn run_ledger(cmd: LedgerCmd) -> ExitCode {
-    let port = match JsonlLedgerPort::from_defaults() {
+    let port = match DualLedgerPort::from_defaults() {
         Ok(p) => p,
         Err(e) => {
             eprintln!("ledger: {e}");

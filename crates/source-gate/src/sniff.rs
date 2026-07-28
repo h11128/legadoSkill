@@ -26,6 +26,10 @@ pub const DEADISH_HINTS: &[&str] = &[
     "此域名出售",
     "该域名",
     "出售域名",
+    // Domain still resolves but is no longer a novel site (product/OEM shell).
+    "专业生产厂家",
+    "工业通风",
+    "请输入您要查询的产品",
 ];
 
 /// Soft walls: alive but not repairable without human.
@@ -137,5 +141,14 @@ mod tests {
             "章节内容".repeat(500)
         );
         assert!(sniff_dead_html(&html, "https://novel.example/book/1", "三体").is_none());
+    }
+
+    #[test]
+    fn sniff_industrial_repurpose() {
+        let html = r#"<html><title>安盛风机 - 工业通风设备专业生产厂家</title>
+            <body><form><input placeholder="请输入您要查询的产品"/></form></body></html>"#;
+        let r = sniff_dead_html(html, "https://www.jinyongwang.net/", "安盛风机").unwrap();
+        assert!(r.starts_with("deadish:"), "{r}");
+        assert!(r.contains("专业生产厂家") || r.contains("工业通风") || r.contains("查询的产品"));
     }
 }

@@ -4,10 +4,12 @@ mod error;
 mod host_stats;
 mod ledger;
 mod schema;
+mod source_snapshot;
 mod verify;
 
 pub use error::DbError;
 pub use host_stats::HostStatsRow;
+pub use source_snapshot::{count as snapshot_count, get as get_snapshot, upsert as upsert_snapshot, SourceSnapshotRow};
 
 use rusqlite::Connection;
 use std::path::Path;
@@ -48,6 +50,18 @@ impl Db {
 
     pub fn record_verify(&self, result: &VerifyResult) -> Result<i64> {
         verify::record(&self.conn, result)
+    }
+
+    fn upsert_source_snapshot(&self, row: &SourceSnapshotRow) -> Result<()> {
+        source_snapshot::upsert(&self.conn, row)
+    }
+
+    pub fn get_source_snapshot(&self, source_key: &str) -> Result<Option<SourceSnapshotRow>> {
+        source_snapshot::get(&self.conn, source_key)
+    }
+
+    pub fn source_snapshot_count(&self) -> Result<i64> {
+        source_snapshot::count(&self.conn)
     }
 
     /// Borrow the underlying connection (tests / advanced callers).
@@ -175,5 +189,25 @@ mod tests {
             .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
             .unwrap();
         assert_eq!(fk, 1);
+    }
+
+    #[test]
+    fn source_snapshot_roundtrip() {
+        let (_dir, db) = open_tmp();
+        let row = SourceSnapshotRow {
+            source_key: "https://a.example/".into(),
+            host_key: "a.example".into(),
+            name: Some("Demo".into()),
+            book_source_type: 0,
+            enabled: true,
+            group_name: Some("未整理".into()),
+            respond_time_ms: Some(1200),
+            payload_json: r#"{"bookSourceUrl":"https://a.example/"}"#.into(),
+            pulled_at: "2026-07-27T00:00:00Z".into(),
+        };
+        db.upsert_source_snapshot(&row).unwrap();
+        assert_eq!(db.source_snapshot_count().unwrap(), 1);
+        let got = db.get_source_snapshot("https://a.example/").unwrap().unwrap();
+        assert_eq!(got.name.as_deref(), Some("Demo"));
     }
 }

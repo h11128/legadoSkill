@@ -65,8 +65,34 @@ Budget clock starts at **pick**. Diagnose+patch **2–3 min**; hard stop **5 min
 [ ] 1  progress next  (script L2-gates walls/parked; ≤~20s)
 [ ] 2  if next.l2_gate.action=migrate → migrate first
 [ ] 3  diagnose --url URL   # also L2-failfast BEFORE phone debug
-[ ] 4  if layer=skip → ledger already done → **立刻汇报**（oneshot 本轮结束）
-[ ] 5  else patch ONLY layer → ONE verify → ledger → 汇报
+[ ] 4  if layer=skip → ledger already done → close-out (§ below) → **立刻汇报**
+[ ] 5  else patch ONLY layer → ONE verify → ledger
+[ ] 6  close-out: ledger → retro（自动 gate/sync）→ progress next（自动 pending）
+```
+
+## Per-URL close-out (mandatory)
+
+User standing preference (this repo): **every** oneshot (fixed / skip / fail) must:
+
+1. **Document** — append ledger; add a short entry to `docs/source-repair-retrospective.md`
+   (or a dated `docs/source-repair-retro-*.md` when the note is long).
+2. **Reflect** — `python scripts/repair_retro.py append --url … --status … --trap … --harness …`
+   (`--script-fix` / `--skill-fix 1` when you actually change code/skill).
+3. **Improve（仅 novel trap / harness 缺口）** — **没有新知识点就不要改 skill 或 Rust。**
+   已有 trap 在 SKILL Traps 表 → `skill_fix=0` 即可。见 `docs/repair-closeout-gate.md`。
+
+### Close-out 决策（简化）
+
+```
+retro --trap 指向 SKILL 已有行？ 或 known:… ？
+├─ YES → skill_fix=0，不改 skill/Rust（除非 diagnose 仍系统性误导 → 可选改 harness）
+└─ NO（novel）→ SKILL 加一行 → skill_fix=1 → gate 通过后再 next
+     Rust/Python：仅当「下次 diagnose 还会走错」才改；纯 selector 补丁不必动
+```
+
+```bash
+# 有 --trap 时可选核对（novel + skill_fix=0 会失败）
+python scripts/repair_closeout_check.py gate --trap SLUG --skill-fix 0|1
 ```
 
 **Why 3pxs / kptxt / utexs burned time (2026-07-26):**
@@ -88,6 +114,7 @@ python scripts/repair_progress.py next
 #   (cd crates && cargo build -p source_cli)
 crates/target/debug/source-cli.exe diagnose --url URL --key 我的
 crates/target/debug/source-cli.exe repair --mode oneshot --url URL
+# Do NOT pass --l0-only on progress/diagnose/repair for live fix (skips L2 dead/wall).
 # Or shim entrypoints (same flags):
 python scripts/repair_diagnose.py --url URL --key 我的
 python scripts/repair_deep_loop.py --mode oneshot --url URL
@@ -125,6 +152,8 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | 站点 DB 挂了 | 正文/搜索页仅「连接数据库失败」 | **skip**（同「搜索口挂了」） |
 | 密码墙 / urldance | title=请输入密码；跳转 urldance.com | **skip**（L2 `wall:`；勿 diagnose） |
 | L2 未过就 debug | phone debug + rank 打在死站上 | diagnose/`progress next` 先 L2 fail-fast |
+| **`--l0-only` 误用 (dcrsu)** | progress/diagnose 带 `--l0-only` → 超时站仍进 tips/probe（~37s） | **禁止** live 挑源/深修用 `--l0-only` |
+| **jieqi 搜索 0 条 (b483)** | POST/m「共有 0 条」；浏览仍有书 | **disable**。禁止首页过滤假搜索。引擎 `site:` 思路延期：`docs/engine-site-search-deferred.md` |
 | rate-only | only concurrentRate | not a fix (unless verify already OK) |
 | URL 无 scheme | bookSourceUrl/searchUrl=`www.foo.com` | 自动补 `http://` 并 save；get_source 试去 `#` 变体；probe 限时 5s×6 |
 | 空探针仍设备校验 | notes 空 + 搜索失效（浪费 ~10s×N） | serial `require_patch`；无补丁 → `no_patch_skip` |
@@ -135,6 +164,18 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | **probe 未解压 gzip** | Accept-Encoding 有 gzip 但 body 不解压 → forms=[] | `fetch_text`/`_post_fetch` 必须 gzip 解压后再 parse |
 | **form 体过长** | `<form>…</form>` >800 字符被截断漏抓（52dmshu=807） | forms regex 上限调到 4000 |
 | **CF 空搜索体 (qiufeng)** | debug「获取成功」但 `a`/`p` 列表亦为 0；PC POST→403 Just a moment | **skip** — WAF，非选择器 |
+| **正文 textNodes 空 (biduju)** | debug 到正文步 `ContentEmptyException`；章节有 `<br/>`/`font` | `class.chapter@html`（勿死磕 textNodes） |
+| **域名改行 (jinyongwang)** | title=「…专业生产厂家」；搜索 placeholder=查询的产品 | L2 deadish → **skip/disable** |
+| **forms_js UTF-8 panic** | diagnose tips 拉首页时 byte 切片切到汉字中间 | `utf8_window`（char boundary） |
+| **progress next 卡死** | 候选按 URL 字母序 → 永远先 `api.*`；index 无 RT | 优先 `queues/repair_serial100_queue.json` `items` |
+| **App JSON 搜索空壳 (ihuaben)** | `/app/search`→`{}`；L2 首页仍小说站；listv2/CDN 可能仍活 | 试 `so.` / 站内 HTML 搜索；**勿**因 API 空就 disable；TOC/正文可继续走 CDN JSON |
+| **重复 phone pull (serial)** | 每批 `refresh_phone_index` 全量 list_sources ~55s | 用 `repair_state.sqlite` + TTL；`repair_refresh_phone_index --force` 才重拉；`get_source` 走 snapshot cache |
+| **Vue SSR 搜索空 (qimao miao)** | `/search/index/` 200 但无 `ul.qm-pic-txt`；`__NUXT__` 壳；phone list=0 | api-miao 无公开 search 端点 → **disable**（browse/shuku OK，§16） |
+| **tocUrl 阅读链 (powanjuan)** | `tocUrl span.read a`→首章；误走 `index/1.html` 目录空 | **清空 tocUrl**；详情页 `div.catalog` + 已有 `ruleToc` |
+| **COS toc 403 (tybook)** | `chapters/{bid}.json` 403 | 改 signed `/tf/chapter_list?` @js |
+| **目录 href 伪装 (gaysay)** | 全部 `<a href="/book/id/">`；真 URL 在 `data-c8dcb4a` base64 | `chapterUrl` `@js:java.base64Decode(result.attr('data-c8dcb4a'))`；`chapterName` `@data-cf3b593` |
+| **POST /sa 搜索空 (yoduzw)** | phone POST 200 list=0；分类页有书 | **disable** §16 |
+| **小米浏览器书城 (miui)** | `reader.browser.miui.com` API 搜索 list=0；L2 body 0；需 App 签名 | **disable/skip** — 非公开 HTML 书源 |
 
 ## Worked examples
 
@@ -152,6 +193,14 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | 笔趣 96biquge | 登录壳非小说站 → skip |
 | 笔趣 bqgcn | diagnose=ok → verify |
 | 猫眼 / 123du / 古诗文 | skip (auth / captcha / WAF) |
+| 必读居 biduju | search `keyword`+GBK+`class.list@table`；正文 `class.chapter@html` |
+| 金庸 jinyongwang | 域名改行工业风机站 → disable/skip |
+| 稻草 dcrsu | L2 HTTP timeout → disable/skip |
+| 免费小说 b483 | search.php 空索引 → **disable**（勿首页过滤 workaround） |
+| 话本 ihuaben | `/app/search`→`{}` → `so.ihuaben.com/search?keyword=` + `.searchresult`；toc CDN `cdn/chapters`；校验成功 |
+| 破万卷 powanjuan | 清空 `tocUrl`；详情页 catalog + ruleToc；keyword=斗罗 校验成功 |
+| 基友 gaysay | toc `data-c8dcb4a` base64 chapterUrl；641 章 + 正文 OK |
+| 淘小说 tybook | COS 403 → `/tf/chapter_list` signed tocUrl |
 
 ## Scripts / CLI
 
@@ -169,5 +218,8 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | `repair_refresh_phone_index.py` | MCP list_sources → phone index（存在性 SOT） |
 | `repair_rt_queue.py` | phone index + RT 排序；搜索标签；1 host 1 源 |
 | `repair_retro.py` | 每源反思 JSONL（trap / harness / script_fix） |
+| `repair_closeout.py` | 核心：gate / pending / SKILL sync |
+| `repair_closeout_check.py` | CLI：`gate` · `pending`（progress next 闸门）· `sync-skill` · `status` |
+| `repair_db.py` / `repair_db_cli.py` | SQLite §9：`source_snapshot` / ledger dual-write / cache meta；`status` / `import-ledger` |
 | `repair_wave.py` | triage（单源调 `source-cli repair`） |
 | `mcp_discover.py` / `parity_*` | MCP discover + parity harness（长期 Python） |

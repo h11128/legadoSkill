@@ -25,6 +25,12 @@ def append_row(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    try:
+        from repair_db import append_ledger_row
+
+        append_ledger_row(row)
+    except Exception:
+        pass
 
 
 def show(path: Path, tail: int) -> None:

@@ -1,0 +1,8 @@
+{
+  "db_path": "temp/full_fix/repair_state.sqlite",
+  "phone_index_ttl_s": 3600,
+  "source_snapshot_ttl_s": 600,
+  "dual_write_ledger": true,
+  "sync_html_meta_on_put": true,
+  "sync_host_stats_on_put": true
+}

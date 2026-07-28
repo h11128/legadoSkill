@@ -23,8 +23,23 @@ fn pid_re() -> &'static Regex {
 fn bookish_href_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r#"(?i)href=["'][^"']*(?:/novel/\d|/book/\d|/txtbook/\d|\.html)[^"']*["']"#)
-            .unwrap()
+        // Do NOT match bare *.html (nav/sort links inflate scores on empty jieqi search).
+        Regex::new(
+            r#"(?i)href=["'][^"']*(?:/novel/\d|/book/\d|/txtbook/\d|/info/\d+|/xiaoshuo/)[^"']*["']"#,
+        )
+        .unwrap()
+    })
+}
+
+fn zero_result_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"共有\s*(?:<[^>]*>\s*)*0\s*(?:<[^>]*>\s*)*条").unwrap())
+}
+
+fn jieqi_empty_contents_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r#"(?is)id\s*=\s*["']jieqi_page_contents["'][^>]*>\s*</(?:div|td)>"#).unwrap()
     })
 }
 
@@ -116,6 +131,12 @@ pub fn score_search_html_with_home(
         out.reasons.push("error_page".into());
     }
 
+    // Jieqi search shell with literally 0 hits (b483) — not a selector bug.
+    if zero_result_re().is_match(html) || jieqi_empty_contents_re().is_match(html) {
+        out.score -= 25;
+        out.reasons.push("zero_search_hits".into());
+    }
+
     let listish = out.reasons.iter().any(|r| r.starts_with("list_"));
     if !listish
         && (lower.contains("首页") || lower.contains(">home<") || lower.contains("nav-bar"))
@@ -180,5 +201,26 @@ mod tests {
     fn error_page_penalty() {
         let s = score_search_html("<title>没找到你需要的页面--必读居</title>", "x", 200);
         assert!(s.score < 0);
+    }
+
+    #[test]
+    fn jieqi_zero_hits_penalized() {
+        let html = r#"<div class="c_nav">搜索关键词“雪山”，共有<b class="hot"> 0 </b>条结果</div>
+            <div id="jieqi_page_contents"></div>
+            <a href="/sort/1/1.html">玄幻</a>"#;
+        let s = score_search_html(html, "雪山", 200);
+        assert!(
+            s.reasons.iter().any(|r| r == "zero_search_hits"),
+            "{:?}",
+            s.reasons
+        );
+        assert!(s.score < 2, "score={}", s.score);
+    }
+
+    #[test]
+    fn nav_html_not_bookish() {
+        let html = r#"<a href="/sort/1/1.html">玄幻</a><a href="/top/allvisit/1.html">榜</a>"#;
+        let s = score_search_html(html, "x", 200);
+        assert!(!s.reasons.iter().any(|r| r.starts_with("bookish_hrefs")));
     }
 }

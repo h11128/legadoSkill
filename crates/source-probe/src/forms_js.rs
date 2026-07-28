@@ -39,7 +39,7 @@ pub fn forms_from_js(js: &str, base: &str) -> Vec<ProbeForm> {
         }
         let action_raw = action_raw.replace("\\/", "/");
         let start = m.get(0).map(|x| x.start()).unwrap_or(0);
-        let window = &js[start.saturating_sub(80)..(start + 200).min(js.len())];
+        let window = utf8_window(js, start, 80, 200);
         let method = if method_post_near_re().is_match(window) {
             "POST"
         } else {
@@ -67,6 +67,29 @@ fn join_url(base: Option<&Url>, rel: &str) -> String {
         Some(b) => b.join(rel).map(|u| u.to_string()).unwrap_or_else(|_| rel.to_string()),
         None => rel.to_string(),
     }
+}
+
+/// Slice `s` around `mid` without splitting UTF-8 codepoints (HTML/JS often has Chinese).
+fn utf8_window(s: &str, mid: usize, before: usize, after: usize) -> &str {
+    let start = floor_char_boundary(s, mid.saturating_sub(before));
+    let end = ceil_char_boundary(s, (mid + after).min(s.len()));
+    &s[start..end]
+}
+
+fn floor_char_boundary(s: &str, mut i: usize) -> usize {
+    i = i.min(s.len());
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
+fn ceil_char_boundary(s: &str, mut i: usize) -> usize {
+    i = i.min(s.len());
+    while i < s.len() && !s.is_char_boundary(i) {
+        i += 1;
+    }
+    i
 }
 
 /// Script `src` candidates likely to contain search form shells.
@@ -102,5 +125,16 @@ mod tests {
         let forms = forms_from_js(js, "https://m.ex.com/");
         assert_eq!(forms.len(), 1);
         assert!(forms[0].fields.contains("searchkey"));
+    }
+
+    #[test]
+    fn utf8_window_near_chinese() {
+        // Mid byte lands inside 查 — must not panic.
+        let js = format!(
+            "{}action='/search.php?q=x'{}",
+            "查".repeat(40),
+            "询".repeat(40)
+        );
+        let _ = forms_from_js(&js, "https://ex.com/");
     }
 }

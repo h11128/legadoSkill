@@ -18,12 +18,24 @@ pub fn layer_tips(diag: &DiagnoseResult) -> Vec<String> {
                 "Fix searchUrl + ruleSearch (bookList/name/bookUrl). Probe forms + common paths + score."
                     .into(),
             );
+            tips.push(
+                "TRAP vue_ssr_search: HTML 200 but no result nodes — check __NUXT__/CSR; api search may differ from page URL"
+                    .into(),
+            );
         }
         Layer::Toc => {
             tips.push("Search OK — do NOT rewrite search. Fix tocUrl + ruleToc.".into());
+            tips.push(
+                "TRAP tocUrl_read_link: span.read/first-chapter href → clear tocUrl; use detail-page catalog"
+                    .into(),
+            );
         }
         Layer::Content => {
             tips.push("TOC OK — fix ruleContent.content against chapter HTML".into());
+            tips.push(
+                "TRAP toc_href_obfuscation: debug loads book detail for content — decode base64 attrs on <a> (e.g. data-c8dcb4a)"
+                    .into(),
+            );
         }
         Layer::FileDownload => {
             tips.push("type=3: downloadUrls; bookUrl must be detail not search page".into());

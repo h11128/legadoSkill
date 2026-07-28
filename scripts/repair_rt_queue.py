@@ -78,15 +78,35 @@ def ledger_sets(path: Path) -> tuple[set[str], set[str], set[str]]:
         u = norm(str(row.get("url") or ""))
         if not u:
             continue
-        if row.get("step") == "check" and "校验成功" in str(row.get("result") or ""):
+        result = str(row.get("result") or "")
+        if row.get("step") == "check" and (
+            "校验成功" in result
+            or result.startswith("fixed")
+            or result.startswith("fixed:")
+        ):
             fixed.add(u)
-        if row.get("step") == "skip":
-            last_skip[u] = str(row.get("result") or "")
+        step = str(row.get("step") or "")
+        # hard outcomes: skip / disable / domain repurposed
+        if (
+            step == "skip"
+            or result.startswith("skip:")
+            or result.startswith("repurposed:")
+            or result.startswith("disable:")
+            or result.startswith("disable")
+        ):
+            last_skip[u] = result if result else step
     for u, reason in last_skip.items():
         if u in fixed:
             continue
         if reason.startswith(DEAD_SKIP_PREFIXES) or any(
             reason.startswith(p) for p in DEAD_SKIP_PREFIXES
+        ):
+            hard.add(u)
+        elif (
+            reason.startswith("skip:")
+            or reason.startswith("repurposed:")
+            or reason.startswith("disable:")
+            or reason.startswith("disable")
         ):
             hard.add(u)
         elif "no_patch" in reason or "搜索" in reason or "verify_fail" in reason:
