@@ -20,7 +20,7 @@ pub use config::RepairConfig;
 pub use context::{HtmlCache, RepairContext, RepairContextBuilder};
 pub use enums::{
     Capability, FingerprintMatchKind, GateAction, Layer, LedgerStep, MergeStrategy, Mode,
-    OptimizeRisk, PatchOpKind, ReportStatus, SiteFamily,
+    OptimizeRisk, PatchOpKind, ReportStatus, SiteFamily, LEDGER_VERIFY_OK,
 };
 pub use error::{ErrorKind, PortError, TypeError};
 pub use gate::{

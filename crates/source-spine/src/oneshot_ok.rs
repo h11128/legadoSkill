@@ -3,7 +3,7 @@
 use source_ports::{Clock, LedgerPort, VerifyPort};
 use source_types::{
     CheckOpts, ErrorKind, GateResult, Layer, LedgerRow, LedgerStep, RepairContext, ReportJson,
-    ReportStatus, VerifyResult,
+    ReportStatus, VerifyResult, LEDGER_VERIFY_OK,
 };
 
 use crate::error::SpineError;
@@ -70,7 +70,7 @@ pub(crate) fn diagnose_ok_verify<V: VerifyPort, L: LedgerPort, K: Clock>(
         ts,
         gate.url.clone(),
         LedgerStep::Check,
-        if vr.success { "ok" } else { "verify_failed" },
+        if vr.success { LEDGER_VERIFY_OK } else { "verify_failed" },
     );
     row.note = Some("diagnose_layer_ok".into());
     row.capability = Some(ctx.capability);

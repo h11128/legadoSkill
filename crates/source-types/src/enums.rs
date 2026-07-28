@@ -134,6 +134,13 @@ pub enum OptimizeRisk {
     Medium,
 }
 
+/// Ledger `result` written after a successful device verify.
+///
+/// The queue in `source-cli progress` and the Python scripts both decide "this
+/// source is done" by looking for this text, so every writer must use it —
+/// a bare "ok" leaves a fixed source in the pick list forever.
+pub const LEDGER_VERIFY_OK: &str = "校验成功";
+
 /// Ledger / observability step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

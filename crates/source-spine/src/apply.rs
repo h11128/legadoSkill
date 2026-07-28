@@ -4,6 +4,7 @@ use source_contracts::validate_patch;
 use source_ports::{Clock, LedgerPort, SourceRepository, VerifyPort};
 use source_types::{
     CheckOpts, ErrorKind, LedgerRow, LedgerStep, PatchPlan, PortError, ReportJson, ReportStatus,
+    LEDGER_VERIFY_OK,
 };
 
 use crate::apply_ops::{apply_ops_to_source, ops_summary};
@@ -125,7 +126,7 @@ impl ApplyService {
         if let Some(store) = idem {
             store.remember_ok(&id_key);
         }
-        ledger_note(ledger, clock, ctx, LedgerStep::Check, "ok", None)?;
+        ledger_note(ledger, clock, ctx, LedgerStep::Check, LEDGER_VERIFY_OK, None)?;
 
         let mut report = ReportJson::new(
             ctx.capability,

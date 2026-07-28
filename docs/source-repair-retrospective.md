@@ -309,6 +309,16 @@ Proof: device verify `校验成功` ~3.5s（`checkDiscovery=false`）.
 |-------|--------|
 | m 搜索 302→桌面丢 query；正文 m 章节 302→ComicView 解密失败 | 搜索/详情/目录改 desktop ac.qq；**fail** 正文仍缺（trap `acqq_mobile_chapter_redirect`） |
 
+## 25. qmbook.taoyuewenhua.net 全免小说 (2026-07-28)
+
+| Issue | Action |
+|-------|--------|
+| 目录取不到：站点是 App API，`/tf/chapter_list` 要 md5 `sign=` | tocUrl 改 signed `@js`（tybook 同族，已知 trap）→ 校验成功 5114ms |
+
+顺手发现的 harness 缺口（已修）：oneshot 校验成功后往 ledger 写的是 `check: ok`，
+而排队只认「校验成功」/`fixed:`，**修好的源会被无限重挑**。
+现在 `source-types::LEDGER_VERIFY_OK` 是唯一写法，`oneshot_ok.rs` / `apply.rs` 都用它。
+
 ## Close-out 标准（每轮）
 
 1. **诊断证据**：`diagnose` + phone `debug_source` / fetch → ledger + retro.msg  

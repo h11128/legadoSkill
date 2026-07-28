@@ -67,7 +67,7 @@ fn norm_url(u: &str) -> String {
 
 fn is_fixed_row(step: &str, result: &str) -> bool {
     step == "check"
-        && (result.contains("校验成功")
+        && (result.contains(source_types::LEDGER_VERIFY_OK)
             || result.starts_with("fixed:")
             || result.starts_with("fixed "))
 }
