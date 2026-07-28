@@ -54,24 +54,67 @@ def ledger_fixed(path: Path = LEDGER) -> set[str]:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if row.get("step") == "check" and "校验成功" in str(row.get("result") or ""):
-            if row.get("url"):
-                urls.add(norm_url(str(row["url"])))
+        result = str(row.get("result") or "")
+        ok = "校验成功" in result or result.startswith(("fixed:", "fixed "))
+        if row.get("step") == "check" and ok and row.get("url"):
+            urls.add(norm_url(str(row["url"])))
     return urls
 
 
+CLOSED_PREFIXES = ("skip:", "repurposed:", "disable:", "fail:")
+SOFT_MARKERS = ("no_patch", "搜索", "verify_fail", "校验失败")
+HARD_PREFIXES = (
+    "disable",
+    "skip:l2",
+    "skip:dead",
+    "skip:wall",
+    "skip:park",
+    "skip:jieqi",
+    "skip:biquge",
+    "repurposed:",
+)
+HARD_MARKERS = ("search_empty", "search_index_empty", "http_dead", "domain_repurposed")
+
+
+def is_attempt_closed(step: str, result: str) -> bool:
+    """A finished attempt: skip / disable / repurposed / explicit give-up.
+
+    ``fail:`` belongs here, otherwise a URL the agent gave up on is offered
+    again by the next ``progress next``. Mirrors ``is_attempt_closed`` in
+    ``crates/source-cli/src/cmds/progress.rs``.
+    """
+    if step == "skip" or result.startswith(CLOSED_PREFIXES):
+        return True
+    return step == "check" and result.startswith(("disable", "fail"))
+
+
+def is_retryable_reason(reason: str) -> bool:
+    soft = any(m in reason for m in SOFT_MARKERS)
+    hard = reason.startswith(HARD_PREFIXES) or any(m in reason for m in HARD_MARKERS)
+    return soft and not hard
+
+
 def ledger_skipped(path: Path = LEDGER) -> set[str]:
-    urls: set[str] = set()
+    last: dict[str, str] = {}
+    forced: set[str] = set()
     if not path.is_file():
-        return urls
+        return set()
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if row.get("step") == "skip" and row.get("url"):
-            urls.add(norm_url(str(row["url"])))
-    return urls
+        url = norm_url(str(row.get("url") or ""))
+        if not url:
+            continue
+        result = str(row.get("result") or "")
+        # `final: true` is written by repair_retro for a terminal fail/skip and
+        # is not downgraded by soft wording in the reason text.
+        if row.get("final") is True:
+            forced.add(url)
+        if is_attempt_closed(str(row.get("step") or ""), result):
+            last[url] = result
+    return forced | {u for u, reason in last.items() if not is_retryable_reason(reason)}
 
 
 def blocked_hosts(fixed: set[str], skipped: set[str]) -> set[str]:

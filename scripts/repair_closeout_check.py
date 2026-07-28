@@ -21,6 +21,68 @@ from repair_closeout import (
 )
 
 
+def selftest() -> int:
+    """Same cases as `mod tests` in crates/source-cli/src/cmds/progress.rs.
+
+    Both runtimes decide which URLs `progress next` may re-pick; they must agree.
+    """
+    import tempfile
+
+    from repair_progress import ledger_fixed, ledger_skipped
+
+    cases: list[tuple[str, list[dict[str, object]], bool]] = [
+        (
+            "gave_up_fail_blocks_repick",
+            [{"url": "https://a.test", "step": "check", "result": "fail:encrypted_chapter"}],
+            True,
+        ),
+        (
+            "transient_fail_stays_pickable",
+            [{"url": "https://a.test", "step": "check", "result": "fail:verify_fail"}],
+            False,
+        ),
+        (
+            "soft_skip_stays_pickable",
+            [{"url": "https://a.test", "step": "skip", "result": "skip:no_patch"}],
+            False,
+        ),
+        (
+            "hard_skip_blocks",
+            [{"url": "https://a.test", "step": "skip", "result": "skip:dead_host"}],
+            True,
+        ),
+        (
+            "final_flag_beats_soft_wording",
+            [
+                {
+                    "url": "https://a.test",
+                    "step": "check",
+                    "result": "fail:校验失败",
+                    "final": True,
+                }
+            ],
+            True,
+        ),
+    ]
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "ledger.jsonl"
+        for name, rows, want_blocked in cases:
+            path.write_text(
+                "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n",
+                encoding="utf-8",
+            )
+            got = "https://a.test" in (ledger_skipped(path) | ledger_fixed(path))
+            if got != want_blocked:
+                failures.append(f"{name}: blocked={got}, want {want_blocked}")
+    if failures:
+        for f in failures:
+            print(f"selftest FAIL: {f}", file=sys.stderr)
+        return 1
+    print(json.dumps({"ok": True, "cases": len(cases)}, ensure_ascii=False))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -33,6 +95,7 @@ def main() -> int:
 
     sub.add_parser("pending", help="block if last ledger URL lacks valid retro/gate")
     sub.add_parser("sync-skill", help="copy skills/…/SKILL.md → ~/.cursor/skills/…")
+    sub.add_parser("selftest", help="Python queue-blocking parity with source-cli progress")
     st = sub.add_parser("status", help="JSON: pending state + skill sync fingerprint")
 
     args = ap.parse_args()
@@ -62,6 +125,9 @@ def main() -> int:
             return 0
         print(f"sync-skill FAIL: {msg}", file=sys.stderr)
         return 1
+
+    if args.cmd == "selftest":
+        return selftest()
 
     if args.cmd == "status":
         ok, errs, detail = pending_closeout()

@@ -44,7 +44,10 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
        (see `docs/repair-closeout-gate.md`). Skipping doc/retro is a process failure;
        skipping skill/Rust on **known** traps is **correct**.
 17. **Structural close-out** — enforced by code, not prose alone:
-    - `repair_retro.py append` rejects invalid trap/skill_fix
+ - `repair_retro.py append` rejects invalid trap/skill_fix
+ - CLI `repair_retro.py append --status fail|skip` seals a `final:true` ledger row,
+ so a given-up URL is never re-picked (do **not** hand-write `skip:` rows to fake this).
+ Automated loops (`repair_serial`, L2 auto-skip) use `seal=False` — their fails stay retryable.
     - `repair_progress.py next` / `source-cli progress next` call `pending` first
     - Do not force skill/Rust on `known:…` or existing SKILL traps
 18. **Auto-commit before next URL** — after close-out, if SKILL / scripts / Rust /

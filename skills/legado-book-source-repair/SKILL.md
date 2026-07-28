@@ -67,7 +67,7 @@ Budget clock starts at **pick**. Diagnose+patch **2–3 min**; hard stop **5 min
 [ ] 3  diagnose --url URL   # also L2-failfast BEFORE phone debug
 [ ] 4  if layer=skip → ledger already done → close-out (§ below) → **立刻汇报**
 [ ] 5  else patch ONLY layer → ONE verify → ledger
-[ ] 6  close-out: ledger → retro（自动 gate/sync）→ progress next（自动 pending）
+[ ] 6  close-out: ledger → retro（自动 gate/sync）→ **git commit skill/scripts/docs** → progress next
 ```
 
 ## Per-URL close-out (mandatory)

@@ -65,18 +65,67 @@ fn norm_url(u: &str) -> String {
     u.trim().trim_end_matches('/').to_string()
 }
 
-/// Hard-done URLs only (fixed / disable / dead skip). Soft no_patch / 搜索失效 stay pickable.
+fn is_fixed_row(step: &str, result: &str) -> bool {
+    step == "check"
+        && (result.contains("校验成功")
+            || result.starts_with("fixed:")
+            || result.starts_with("fixed "))
+}
+
+/// A finished attempt: skip / disable / repurposed / explicit give-up.
+/// `fail:` belongs here — without it a URL the agent gave up on is offered again
+/// by the next `progress next`.
+fn is_attempt_closed(step: &str, result: &str) -> bool {
+    step == "skip"
+        || result.starts_with("skip:")
+        || result.starts_with("repurposed:")
+        || result.starts_with("disable:")
+        || result.starts_with("fail:")
+        || (step == "check" && (result.starts_with("disable") || result.starts_with("fail")))
+}
+
+/// Incomplete work (no patch tried, transient verify failure) stays pickable
+/// unless a hard marker such as dead host / disable overrides it.
+fn is_retryable_reason(reason: &str) -> bool {
+    let soft = reason.contains("no_patch")
+        || reason.contains("搜索")
+        || reason.contains("verify_fail")
+        || reason.contains("校验失败");
+    let hard = reason.starts_with("disable")
+        || reason.starts_with("skip:l2")
+        || reason.starts_with("skip:dead")
+        || reason.starts_with("skip:wall")
+        || reason.starts_with("skip:park")
+        || reason.starts_with("repurposed:")
+        || reason.starts_with("skip:jieqi")
+        || reason.starts_with("skip:biquge")
+        || reason.contains("search_empty")
+        || reason.contains("search_index_empty")
+        || reason.contains("http_dead")
+        || reason.contains("domain_repurposed");
+    soft && !hard
+}
+
+/// Hard-done URLs only (fixed / disable / dead skip / gave-up fail).
 fn ledger_blocked() -> std::collections::HashSet<String> {
     use std::collections::HashSet;
-    let mut fixed: HashSet<String> = HashSet::new();
-    let mut last_skip: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     let Some(path) = default_ledger() else {
         return HashSet::new();
     };
     let Ok(raw) = std::fs::read_to_string(path) else {
         return HashSet::new();
     };
-    for line in raw.lines() {
+    blocked_from_lines(raw.lines())
+}
+
+fn blocked_from_lines<'a>(
+    lines: impl Iterator<Item = &'a str>,
+) -> std::collections::HashSet<String> {
+    use std::collections::{HashMap, HashSet};
+    let mut fixed: HashSet<String> = HashSet::new();
+    let mut forced: HashSet<String> = HashSet::new();
+    let mut last_closed: HashMap<String, String> = HashMap::new();
+    for line in lines {
         let Ok(row) = serde_json::from_str::<Value>(line) else {
             continue;
         };
@@ -86,48 +135,26 @@ fn ledger_blocked() -> std::collections::HashSet<String> {
         }
         let result = row.get("result").and_then(|v| v.as_str()).unwrap_or("");
         let step = row.get("step").and_then(|v| v.as_str()).unwrap_or("");
-        if step == "check"
-            && (result.contains("校验成功")
-                || result.starts_with("fixed:")
-                || result.starts_with("fixed "))
-        {
+        if is_fixed_row(step, result) {
             fixed.insert(u.clone());
         }
-        if step == "skip"
-            || result.starts_with("skip:")
-            || result.starts_with("repurposed:")
-            || result.starts_with("disable:")
-            || (step == "check" && result.starts_with("disable"))
-        {
-            last_skip.insert(u, result.to_string());
+        // `final: true` is written by repair_retro for a terminal fail/skip and
+        // is not downgraded by soft wording in the reason text.
+        if row.get("final").and_then(|v| v.as_bool()).unwrap_or(false) {
+            forced.insert(u.clone());
+        }
+        if is_attempt_closed(step, result) {
+            last_closed.insert(u, result.to_string());
         }
     }
     let mut hard = HashSet::new();
-    for (u, reason) in last_skip {
-        if fixed.contains(&u) {
+    for (u, reason) in last_closed {
+        if fixed.contains(&u) || is_retryable_reason(&reason) {
             continue;
-        }
-        let soft = reason.contains("no_patch")
-            || reason.contains("搜索")
-            || reason.contains("verify_fail")
-            || reason.contains("校验失败");
-        let hard_prefix = reason.starts_with("disable")
-            || reason.starts_with("skip:l2")
-            || reason.starts_with("skip:dead")
-            || reason.starts_with("skip:wall")
-            || reason.starts_with("skip:park")
-            || reason.starts_with("repurposed:")
-            || reason.starts_with("skip:jieqi")
-            || reason.starts_with("skip:biquge")
-            || reason.contains("search_empty")
-            || reason.contains("search_index_empty")
-            || reason.contains("http_dead")
-            || reason.contains("domain_repurposed");
-        if soft && !hard_prefix {
-            continue; // retryable
         }
         hard.insert(u);
     }
+    hard.extend(forced);
     hard.extend(fixed);
     hard
 }
@@ -296,4 +323,68 @@ pub fn run_progress(args: ProgressArgs) -> ExitCode {
     }
     println!("{}", json!({"next": null, "hint": "no verify-pass candidate in first 40"}));
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(url: &str, step: &str, result: &str) -> String {
+        json!({"url": url, "step": step, "result": result}).to_string()
+    }
+
+    #[test]
+    fn gave_up_fail_blocks_repick() {
+        let lines = vec![row(
+            "https://ac.qq.com",
+            "check",
+            "fail:content_redirect_encrypted_chapter",
+        )];
+        let blocked = blocked_from_lines(lines.iter().map(String::as_str));
+        assert!(blocked.contains("https://ac.qq.com"));
+    }
+
+    #[test]
+    fn transient_fail_stays_pickable() {
+        let lines = vec![row("https://a.test", "check", "fail:verify_fail")];
+        let blocked = blocked_from_lines(lines.iter().map(String::as_str));
+        assert!(blocked.is_empty());
+    }
+
+    #[test]
+    fn later_fix_overrides_earlier_fail() {
+        let lines = vec![
+            row("https://b.test", "check", "fail:toc_empty"),
+            row("https://b.test", "check", "校验成功"),
+        ];
+        let blocked = blocked_from_lines(lines.iter().map(String::as_str));
+        assert!(blocked.contains("https://b.test"));
+    }
+
+    #[test]
+    fn soft_skip_and_hard_skip_differ() {
+        let lines = vec![
+            row("https://soft.test", "skip", "skip:no_patch"),
+            row("https://hard.test", "skip", "skip:dead_host"),
+        ];
+        let blocked = blocked_from_lines(lines.iter().map(String::as_str));
+        assert!(!blocked.contains("https://soft.test"));
+        assert!(blocked.contains("https://hard.test"));
+    }
+
+    #[test]
+    fn final_flag_beats_soft_wording() {
+        let line =
+            json!({"url": "https://d.test", "step": "check", "result": "fail:校验失败", "final": true})
+                .to_string();
+        let blocked = blocked_from_lines(std::iter::once(line.as_str()));
+        assert!(blocked.contains("https://d.test"));
+    }
+
+    #[test]
+    fn trailing_slash_is_normalized() {
+        let lines = vec![row("https://c.test/", "check", "fail:dead")];
+        let blocked = blocked_from_lines(lines.iter().map(String::as_str));
+        assert!(blocked.contains("https://c.test"));
+    }
 }
