@@ -303,6 +303,12 @@ Proof: device verify `校验成功` ~3.5s（`checkDiscovery=false`）.
 |-------|--------|
 | `/api/v2/search/word` phone list=0；PC 404；L2 body=0 | **disable** — 小米浏览器 App 内嵌 |
 
+## 24. m.ac.qq.com 腾讯漫画 (2026-07-28)
+
+| Issue | Action |
+|-------|--------|
+| m 搜索 302→桌面丢 query；正文 m 章节 302→ComicView 解密失败 | 搜索/详情/目录改 desktop ac.qq；**fail** 正文仍缺（trap `acqq_mobile_chapter_redirect`） |
+
 ## Close-out 标准（每轮）
 
 1. **诊断证据**：`diagnose` + phone `debug_source` / fetch → ledger + retro.msg  

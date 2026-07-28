@@ -47,6 +47,9 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
     - `repair_retro.py append` rejects invalid trap/skill_fix
     - `repair_progress.py next` / `source-cli progress next` call `pending` first
     - Do not force skill/Rust on `known:…` or existing SKILL traps
+18. **Auto-commit before next URL** — after close-out, if SKILL / scripts / Rust /
+    retrospective docs changed this URL, `git commit` those files **before**
+    `progress next`. Do not leave skill/script fixes uncommitted across sources.
 15. **Never pass `--l0-only` on live progress / diagnose / repair.** L0-only skips L2 dead/wall
     sniff and burns phone/probe time on dead hosts (dcrsu 2026-07-27). Use full gate.
 16. **If site search API is empty but browse still works:** **disable** by default. Do **not**
