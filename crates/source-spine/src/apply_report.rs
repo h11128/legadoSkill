@@ -1,14 +1,12 @@
 //! Apply outcome helpers (dry-run / fail / validate reports).
 
-use source_types::{
-    BookSource, ErrorKind, PatchPlan, ReportJson, ReportStatus, VerifyResult,
-};
+use source_types::{BookSource, ErrorKind, PatchPlan, ReportJson, ReportStatus, VerifyResult};
 
 use crate::apply_ops::ops_summary;
-use crate::outcome::ApplyOutcome;
-use source_types::RepairContext;
 use crate::error::SpineError;
+use crate::outcome::ApplyOutcome;
 use crate::report_emit::emit_report_json;
+use source_types::RepairContext;
 
 pub(crate) fn short_circuit_fixed(
     ctx: &RepairContext,
@@ -114,13 +112,7 @@ pub fn report_validate_failure(
     url: source_types::Url,
     message: impl Into<String>,
 ) -> Result<ApplyOutcome, SpineError> {
-    let mut report = ReportJson::new(
-        ctx.capability,
-        ctx.mode,
-        url,
-        ReportStatus::Failed,
-        message,
-    );
+    let mut report = ReportJson::new(ctx.capability, ctx.mode, url, ReportStatus::Failed, message);
     report.family = Some(ctx.family.clone());
     let report_line = emit_report_json(&report)?;
     Ok(ApplyOutcome {

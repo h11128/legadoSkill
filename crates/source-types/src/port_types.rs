@@ -9,17 +9,9 @@ use crate::identity::Url;
 pub type HeaderMap = HashMap<String, String>;
 
 /// Options for device verify. `check_discovery` defaults to false.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CheckOpts {
     pub check_discovery: bool,
-}
-
-impl Default for CheckOpts {
-    fn default() -> Self {
-        Self {
-            check_discovery: false,
-        }
-    }
 }
 
 impl CheckOpts {

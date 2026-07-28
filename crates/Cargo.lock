@@ -1297,6 +1297,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "source_check"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "source_mcp",
+ "source_ports",
+ "source_types",
+ "ureq",
+ "url",
+]
+
+[[package]]
 name = "source_cli"
 version = "0.1.0"
 dependencies = [
@@ -1306,20 +1319,38 @@ dependencies = [
  "serde_json",
  "source_adapters",
  "source_cache",
+ "source_check",
+ "source_closeout",
  "source_contracts",
  "source_diagnose",
  "source_gate",
  "source_hunt",
  "source_mcp",
  "source_migrate",
+ "source_parse",
  "source_patch",
  "source_ports",
  "source_probe",
+ "source_queue",
  "source_spine",
  "source_types",
  "source_video",
  "ureq",
  "url",
+]
+
+[[package]]
+name = "source_closeout"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "source_mcp",
+ "source_types",
+ "tempfile",
 ]
 
 [[package]]
@@ -1402,6 +1433,7 @@ dependencies = [
  "source_types",
  "tempfile",
  "ureq",
+ "url",
 ]
 
 [[package]]
@@ -1414,6 +1446,15 @@ dependencies = [
  "source_types",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "source_parse"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1459,6 +1500,17 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "source_queue"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "source_mcp",
+ "source_types",
 ]
 
 [[package]]

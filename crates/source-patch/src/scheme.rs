@@ -51,7 +51,13 @@ mod tests {
         }));
         let n = normalize_source_schemes(&mut src);
         assert!(n.iter().any(|x| x.contains("bookSourceUrl")));
-        assert!(src.as_value()["bookSourceUrl"].as_str().unwrap().starts_with("http://"));
-        assert!(src.as_value()["searchUrl"].as_str().unwrap().starts_with("http://"));
+        assert!(src.as_value()["bookSourceUrl"]
+            .as_str()
+            .unwrap()
+            .starts_with("http://"));
+        assert!(src.as_value()["searchUrl"]
+            .as_str()
+            .unwrap()
+            .starts_with("http://"));
     }
 }

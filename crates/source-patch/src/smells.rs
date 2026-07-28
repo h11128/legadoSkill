@@ -65,12 +65,7 @@ pub fn fix_bookurl_class_space(book_url: &str) -> (String, bool) {
                 .get(2)
                 .map(|m| format!(".{}", m.as_str()))
                 .unwrap_or_default();
-            cleaned.push(format!(
-                "{}@tag.a{}{}",
-                &caps[1],
-                idx,
-                &caps[3]
-            ));
+            cleaned.push(format!("{}@tag.a{}{}", &caps[1], idx, &caps[3]));
             changed = true;
             continue;
         }

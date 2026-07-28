@@ -3,8 +3,10 @@
 //! Python SOT: `scripts/mcp_client.py`, `scripts/mcp_channel.py`,
 //! `scripts/repair_wait.py`, `scripts/repair_session_log.py`.
 
+mod batch_verify;
 mod channel;
 mod client;
+mod discover;
 mod endpoint;
 mod fakes;
 mod ledger;
@@ -12,8 +14,10 @@ mod root;
 mod source_repo;
 mod verify;
 
-pub use channel::{FsChannelGuard, FsChannelPort};
+pub use batch_verify::{batch_check_urls, batch_max_wait_s};
+pub use channel::{status as channel_status_raw, FsChannelGuard, FsChannelPort};
 pub use client::McpClient;
+pub use discover::{discover, probe_mcp, write_defaults as write_discover_defaults};
 pub use endpoint::McpEndpoint;
 pub use fakes::{
     MemChannelGuard, MemChannelPort, MemClock, MemLedgerPort, MemSourceRepository, MemVerifyPort,
@@ -24,6 +28,10 @@ pub use ledger::{
 pub use root::repo_root;
 pub use source_repo::{url_candidates, McpSourceRepository};
 pub use verify::McpVerifyPort;
+pub fn channel_status() -> Result<serde_json::Value, source_types::PortError> {
+    let root = repo_root()?;
+    channel::status(&root)
+}
 
 #[cfg(test)]
 mod live_tests {

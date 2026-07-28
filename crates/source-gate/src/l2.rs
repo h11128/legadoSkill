@@ -138,9 +138,7 @@ fn read_body(resp: ureq::Response) -> String {
 
 fn extract_title(text: &str) -> String {
     static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
-    let re = RE.get_or_init(|| {
-        Regex::new(r"(?i)<title[^>]*>([^<]+)").expect("title regex")
-    });
+    let re = RE.get_or_init(|| Regex::new(r"(?i)<title[^>]*>([^<]+)").expect("title regex"));
     re.captures(text)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().trim().to_string())
@@ -185,12 +183,7 @@ mod tests {
     #[test]
     fn host_migrate_detected() {
         let html = "<html><title>ok</title><body>novel home</body></html>";
-        let p = build_probe(
-            200,
-            "https://old.org/",
-            "https://www.new.com/",
-            html,
-        );
+        let p = build_probe(200, "https://old.org/", "https://www.new.com/", html);
         assert!(p.ok);
         assert_eq!(p.host_migrated, Some(true));
         assert_eq!(p.from_host.as_ref().unwrap().as_str(), "old.org");

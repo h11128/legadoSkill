@@ -42,7 +42,6 @@ pub fn probe_search_from_forms(forms: Vec<ProbeForm>, _keyword: &str) -> ProbeRe
     candidates.retain(|c| seen.insert(c.search_url.clone()));
     let ranked = rank_offline(&candidates);
     let best = pick_best(&ranked);
-    let mut candidates = candidates;
     if let Some(ref b) = best {
         if let Some(idx) = candidates.iter().position(|c| c.search_url == b.search_url) {
             let prefer = candidates.remove(idx);

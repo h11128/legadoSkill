@@ -37,27 +37,27 @@ fn absolutize(template: &str, base: &str) -> String {
             return format!("{}://{}{}", u.scheme(), u.host_str().unwrap_or(""), t);
         }
     }
-    format!("{}/{}", base.trim_end_matches('/'), t.trim_start_matches('/'))
+    format!(
+        "{}/{}",
+        base.trim_end_matches('/'),
+        t.trim_start_matches('/')
+    )
 }
 
-fn ops_from_best(
-    best: &ProbeBest,
-    source_url: &str,
-    keyword: &str,
-    gbk: bool,
-) -> Vec<PatchOp> {
+fn ops_from_best(best: &ProbeBest, source_url: &str, keyword: &str, gbk: bool) -> Vec<PatchOp> {
     let mut search_url = best.search_url.clone();
     if gbk {
         search_url = append_charset_gbk(&search_url);
     }
     search_url = absolutize(&search_url, source_url);
 
-    let mut ops = vec![PatchOp::set("searchUrl", serde_json::json!(search_url.clone()))
-        .with_note(if gbk {
+    let mut ops = vec![
+        PatchOp::set("searchUrl", serde_json::json!(search_url.clone())).with_note(if gbk {
             "live probe + GBK"
         } else {
             "live probe"
-        })];
+        }),
+    ];
 
     // Prefer hints from scored HTML; else re-fetch best and guess.
     let mut bl = best.book_list_hint.clone();

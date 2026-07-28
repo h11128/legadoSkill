@@ -39,38 +39,40 @@ pub(crate) fn diagnose_ok_verify<V: VerifyPort, L: LedgerPort, K: Clock>(
         });
     }
 
-    let vr: VerifyResult = match verify.check(
-        &ctx.source_key,
-        CheckOpts::new(ctx.config.check_discovery),
-    ) {
-        Ok(v) => v,
-        Err(e) => {
-            let mut report = ReportJson::new(
-                ctx.capability,
-                ctx.mode,
-                gate.url.clone(),
-                ReportStatus::Failed,
-                format!("diagnose layer=ok; verify error: {e}"),
-            );
-            report.family = Some(ctx.family.clone());
-            report.layer = Some(Layer::Ok);
-            let report_line = emit_report_json(&report)?;
-            return Ok(OneshotResult {
-                report,
-                report_line,
-                exit_code: e.kind().exit_code(),
-                apply: None,
-                gate,
-            });
-        }
-    };
+    let vr: VerifyResult =
+        match verify.check(&ctx.source_key, CheckOpts::new(ctx.config.check_discovery)) {
+            Ok(v) => v,
+            Err(e) => {
+                let mut report = ReportJson::new(
+                    ctx.capability,
+                    ctx.mode,
+                    gate.url.clone(),
+                    ReportStatus::Failed,
+                    format!("diagnose layer=ok; verify error: {e}"),
+                );
+                report.family = Some(ctx.family.clone());
+                report.layer = Some(Layer::Ok);
+                let report_line = emit_report_json(&report)?;
+                return Ok(OneshotResult {
+                    report,
+                    report_line,
+                    exit_code: e.kind().exit_code(),
+                    apply: None,
+                    gate,
+                });
+            }
+        };
 
     let ts = clock.now_utc().to_rfc3339();
     let mut row = LedgerRow::new(
         ts,
         gate.url.clone(),
         LedgerStep::Check,
-        if vr.success { LEDGER_VERIFY_OK } else { "verify_failed" },
+        if vr.success {
+            LEDGER_VERIFY_OK
+        } else {
+            "verify_failed"
+        },
     );
     row.note = Some("diagnose_layer_ok".into());
     row.capability = Some(ctx.capability);

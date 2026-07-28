@@ -9,7 +9,9 @@ mod verify;
 
 pub use error::DbError;
 pub use host_stats::HostStatsRow;
-pub use source_snapshot::{count as snapshot_count, get as get_snapshot, upsert as upsert_snapshot, SourceSnapshotRow};
+pub use source_snapshot::{
+    count as snapshot_count, get as get_snapshot, upsert as upsert_snapshot, SourceSnapshotRow,
+};
 
 use rusqlite::Connection;
 use std::path::Path;
@@ -52,6 +54,7 @@ impl Db {
         verify::record(&self.conn, result)
     }
 
+    #[allow(dead_code)]
     fn upsert_source_snapshot(&self, row: &SourceSnapshotRow) -> Result<()> {
         source_snapshot::upsert(&self.conn, row)
     }
@@ -167,11 +170,9 @@ mod tests {
         assert!(id > 0);
         let success: i64 = db
             .connection()
-            .query_row(
-                "SELECT success FROM verify_runs WHERE id=?1",
-                [id],
-                |r| r.get(0),
-            )
+            .query_row("SELECT success FROM verify_runs WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(success, 1);
     }
@@ -207,7 +208,10 @@ mod tests {
         };
         db.upsert_source_snapshot(&row).unwrap();
         assert_eq!(db.source_snapshot_count().unwrap(), 1);
-        let got = db.get_source_snapshot("https://a.example/").unwrap().unwrap();
+        let got = db
+            .get_source_snapshot("https://a.example/")
+            .unwrap()
+            .unwrap();
         assert_eq!(got.name.as_deref(), Some("Demo"));
     }
 }

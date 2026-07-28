@@ -108,8 +108,7 @@ pub fn score_search_html_with_home(
     if pid_re().is_match(html) {
         out.score += 4;
         out.reasons.push("pid_js".into());
-        out.book_url_hint =
-            Some("a@href##pid:\\s*(\\d+)##/novel/$1.html###".into());
+        out.book_url_hint = Some("a@href##pid:\\s*(\\d+)##/novel/$1.html###".into());
     }
 
     if !query.is_empty() && html.contains(query) {

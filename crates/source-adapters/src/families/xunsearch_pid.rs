@@ -5,8 +5,8 @@ use source_types::{
     OptimizePlan, PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use source_types::RepairContext;
 use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
 
 pub static XUNSEARCH_PID_RULES: &[FingerprintRule] = &[];
 
@@ -55,9 +55,8 @@ impl XunsearchPid {
             ));
         }
         let low = html.to_ascii_lowercase();
-        let has_shape = low.contains("xunsearch")
-            || low.contains("search.php?q=")
-            || low.contains("/novel/");
+        let has_shape =
+            low.contains("xunsearch") || low.contains("search.php?q=") || low.contains("/novel/");
         if !has_shape {
             return AdapterOutcome::Unrepairable(Unrepairable::new(
                 "HTML lacks xunsearch/pid markers",

@@ -15,14 +15,9 @@ pub const COMMON_GET_TEMPLATES: &[&str] = &[
 ];
 
 /// Append common-path candidates not already present (capped).
-pub fn common_path_candidates(
-    existing: &[SearchCandidate],
-    budget: usize,
-) -> Vec<SearchCandidate> {
-    let mut seen: std::collections::HashSet<&str> = existing
-        .iter()
-        .map(|c| c.search_url.as_str())
-        .collect();
+pub fn common_path_candidates(existing: &[SearchCandidate], budget: usize) -> Vec<SearchCandidate> {
+    let mut seen: std::collections::HashSet<&str> =
+        existing.iter().map(|c| c.search_url.as_str()).collect();
     let mut out = Vec::new();
     for tmpl in COMMON_GET_TEMPLATES {
         if out.len() >= budget {

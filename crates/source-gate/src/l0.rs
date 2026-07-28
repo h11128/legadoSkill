@@ -87,9 +87,8 @@ fn to_url(raw: &str) -> Url {
             } else {
                 format!("http://{raw}")
             };
-            Url::new(padded.trim()).unwrap_or_else(|_| {
-                Url::new("http://invalid.invalid/").expect("fallback url")
-            })
+            Url::new(padded.trim())
+                .unwrap_or_else(|_| Url::new("http://invalid.invalid/").expect("fallback url"))
         }
     }
 }

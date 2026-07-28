@@ -51,9 +51,8 @@ pub fn enrich_with_live_probe(diag: &mut DiagnoseResult, live: &LiveProbeResult)
         diag.tips = layer_tips(diag);
     }
     if live.search_endpoint_dead {
-        diag.tips.push(
-            "TRAP 搜索口挂了: form endpoint HTTP 5xx — SKIP (not a selector bug)".into(),
-        );
+        diag.tips
+            .push("TRAP 搜索口挂了: form endpoint HTTP 5xx — SKIP (not a selector bug)".into());
     }
     if let Some(ref best) = live.best {
         if best.score >= 2 {
@@ -78,13 +77,7 @@ pub fn enrich_with_live_probe(diag: &mut DiagnoseResult, live: &LiveProbeResult)
                 .push(format!("form action (no live best): {}", f.action));
         }
     }
-    if live
-        .ranked
-        .first()
-        .map(|r| r.score <= 0)
-        .unwrap_or(false)
-        && !live.search_endpoint_dead
-    {
+    if live.ranked.first().map(|r| r.score <= 0).unwrap_or(false) && !live.search_endpoint_dead {
         diag.tips.push(
             "TRAP: form candidates scored ≤0 (homepage shell?) — try /search.php?q= etc.".into(),
         );

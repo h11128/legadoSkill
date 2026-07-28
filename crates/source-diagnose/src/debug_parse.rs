@@ -72,7 +72,6 @@ impl DebugParse {
 }
 
 pub fn parse_debug_text(text: &str) -> DebugParse {
-    let text = text;
     let mut out = DebugParse {
         content_empty: text.contains("内容为空") || text.contains("ContentEmptyException"),
         toc_empty: text.contains("目录列表为空") || text.contains("TocEmptyException"),
@@ -112,7 +111,7 @@ pub fn parse_debug_text(text: &str) -> DebugParse {
     for m in get_re.captures_iter(text) {
         let u = m
             .get(1)
-            .map(|x| x.as_str().trim().split_whitespace().next().unwrap_or(""))
+            .map(|x| x.as_str().split_whitespace().next().unwrap_or(""))
             .unwrap_or("");
         if looks_like_search_url(Some(u)) {
             continue;
@@ -132,10 +131,7 @@ pub fn parse_debug_text(text: &str) -> DebugParse {
 
     let mut fake = false;
     let books = out.search_books.unwrap_or(0);
-    if out.list_empty_fallback_detail
-        && books <= 1
-        && matches!(out.search_list, Some(0) | None)
-    {
+    if out.list_empty_fallback_detail && books <= 1 && matches!(out.search_list, Some(0) | None) {
         fake = true;
     }
     if looks_like_search_url(out.detail_url.as_deref()) {
@@ -150,10 +146,11 @@ pub fn parse_debug_text(text: &str) -> DebugParse {
         "busy".into()
     } else if out.download_empty {
         "file_download".into()
-    } else if fake {
-        "search".into()
-    } else if out.search_books == Some(0)
-        || (out.search_list == Some(0) && out.search_books.is_none() && text.contains("未获取到书籍"))
+    } else if fake
+        || out.search_books == Some(0)
+        || (out.search_list == Some(0)
+            && out.search_books.is_none()
+            && text.contains("未获取到书籍"))
     {
         "search".into()
     } else if out.toc_empty || out.toc_list == Some(0) || out.toc_chapters == Some(0) {
@@ -202,7 +199,8 @@ mod tests {
 
     #[test]
     fn fake_detail_forces_search() {
-        let text = "列表为空,按详情页解析\n书籍总数:1\n列表大小:0\n≡获取成功:https://m.wmp8.com/s.php?q=x";
+        let text =
+            "列表为空,按详情页解析\n书籍总数:1\n列表大小:0\n≡获取成功:https://m.wmp8.com/s.php?q=x";
         let p = parse_debug_text(text);
         assert!(p.fake_detail);
         assert_eq!(p.layer_raw, "search");

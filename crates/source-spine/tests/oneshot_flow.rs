@@ -1,17 +1,17 @@
 //! Integration tests for source_spine oneshot / ApplyService (§14.5).
 
+use serde_json::json;
 use source_ports::SourceRepository;
 use source_spine::fakes::{BusyChannel, FixedClock, IdleChannel, MemLedger, MemRepo, MemVerify};
 use source_spine::{
-    emit_report_json, idempotency_key, run_repair_oneshot, ApplyService, GateInput,
-    DiagnoseInput, IdempotencyStore, MemoryIdempotency, NoopRepairPlugin, PlanOrPlugin,
-    RepairContext, RepairPorts, REPORT_JSON_PREFIX,
+    emit_report_json, idempotency_key, run_repair_oneshot, ApplyService, DiagnoseInput, GateInput,
+    IdempotencyStore, MemoryIdempotency, NoopRepairPlugin, PlanOrPlugin, RepairContext,
+    RepairPorts, REPORT_JSON_PREFIX,
 };
 use source_types::{
     BookSource, Capability, GateAction, GateResult, PatchOp, PatchPlan, ReportStatus, SiteFamily,
     SourceKey, Url,
 };
-use serde_json::json;
 use std::cell::RefCell;
 
 fn sample_source(url: &str) -> BookSource {
@@ -50,10 +50,7 @@ fn apply_success_claims_fixed_only_with_verify() {
     let ctx = ctx_for(url, source);
     let plan = sample_plan(url);
 
-    let out = ApplyService::apply(
-        &ctx, &plan, &repo, &verify, &ledger, &clock, None,
-    )
-    .unwrap();
+    let out = ApplyService::apply(&ctx, &plan, &repo, &verify, &ledger, &clock, None).unwrap();
 
     assert_eq!(out.report.status, ReportStatus::Fixed);
     assert!(out.report.verify.as_ref().unwrap().success);
@@ -82,10 +79,7 @@ fn verify_fail_after_save_does_not_claim_fixed() {
     let ctx = ctx_for(url, source);
     let plan = sample_plan(url);
 
-    let out = ApplyService::apply(
-        &ctx, &plan, &repo, &verify, &ledger, &clock, None,
-    )
-    .unwrap();
+    let out = ApplyService::apply(&ctx, &plan, &repo, &verify, &ledger, &clock, None).unwrap();
 
     assert_eq!(out.report.status, ReportStatus::Failed);
     assert!(out.verify_failed_after_save);
@@ -117,10 +111,7 @@ fn empty_ops_validate_fails_without_save() {
     let mut plan = sample_plan(url);
     plan.ops.clear();
 
-    let out = ApplyService::apply(
-        &ctx, &plan, &repo, &verify, &ledger, &clock, None,
-    )
-    .unwrap();
+    let out = ApplyService::apply(&ctx, &plan, &repo, &verify, &ledger, &clock, None).unwrap();
     assert_eq!(out.report.status, ReportStatus::Failed);
     assert!(!out.saved);
     assert_eq!(*verify.calls.borrow(), 0);
@@ -139,10 +130,7 @@ fn dry_run_skips_save_and_verify() {
         .build();
     let plan = sample_plan(url);
 
-    let out = ApplyService::apply(
-        &ctx, &plan, &repo, &verify, &ledger, &clock, None,
-    )
-    .unwrap();
+    let out = ApplyService::apply(&ctx, &plan, &repo, &verify, &ledger, &clock, None).unwrap();
     assert!(out.dry_run);
     assert!(!out.saved);
     assert_eq!(*verify.calls.borrow(), 0);
@@ -312,7 +300,13 @@ fn idempotency_short_circuit_skips_repatch() {
     idem.remember_ok(&key);
 
     let out = ApplyService::apply(
-        &ctx, &plan, &repo, &verify, &ledger, &clock, Some(&mut idem),
+        &ctx,
+        &plan,
+        &repo,
+        &verify,
+        &ledger,
+        &clock,
+        Some(&mut idem),
     )
     .unwrap();
     assert_eq!(out.report.status, ReportStatus::Fixed);
@@ -428,8 +422,7 @@ fn registry_unknown_identify_without_html_is_unrepairable() {
     assert!(out.apply.is_none());
     assert_eq!(out.report.status, ReportStatus::Skipped);
     assert!(
-        out.report.message.contains("no repair plugin")
-            || out.report.message.contains("Unknown"),
+        out.report.message.contains("no repair plugin") || out.report.message.contains("Unknown"),
         "msg={}",
         out.report.message
     );

@@ -56,12 +56,13 @@ fn compile_all() -> Result<ValidatorMap, ContractError> {
     let mut map = ValidatorMap::new();
     for &name in SCHEMA_NAMES {
         let schema = load_schema_value(name)?;
-        let validator = jsonschema::options().build(&schema).map_err(|e| {
-            ContractError::SchemaCompile {
-                name: name.to_string(),
-                message: e.to_string(),
-            }
-        })?;
+        let validator =
+            jsonschema::options()
+                .build(&schema)
+                .map_err(|e| ContractError::SchemaCompile {
+                    name: name.to_string(),
+                    message: e.to_string(),
+                })?;
         map.insert(name, validator);
     }
     Ok(map)

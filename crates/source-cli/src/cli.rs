@@ -1,10 +1,17 @@
 //! Clap CLI definition (kept out of main.rs for the 300-line limit).
 
+use crate::cli_subs::{
+    CheckSub, CloseoutSub, LedgerSub, ParseSub, ProgressSub, QueueSub, RetroSub,
+};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "source-cli", about = "LegadoSkill repair platform CLI", version)]
+#[command(
+    name = "source-cli",
+    about = "LegadoSkill repair platform CLI",
+    version
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub cmd: Cmd,
@@ -111,14 +118,8 @@ pub enum Cmd {
         seeds: Option<PathBuf>,
     },
     Progress {
-        #[arg(long, default_value = "next")]
-        cmd: String,
-        #[arg(long)]
-        index: Option<PathBuf>,
-        #[arg(long)]
-        rules: Option<PathBuf>,
-        #[arg(long, default_value_t = false)]
-        l0_only: bool,
+        #[command(subcommand)]
+        cmd: ProgressSub,
     },
     Ledger {
         #[command(subcommand)]
@@ -144,23 +145,55 @@ pub enum Cmd {
         #[arg(long)]
         routes: Option<PathBuf>,
     },
-    Version,
-}
-
-#[derive(Subcommand)]
-pub enum LedgerSub {
-    Append {
-        #[arg(long)]
-        url: String,
-        #[arg(long)]
-        step: String,
-        #[arg(long)]
-        result: String,
-        #[arg(long)]
-        note: Option<String>,
+    Closeout {
+        #[command(subcommand)]
+        cmd: CloseoutSub,
     },
-    Show {
-        #[arg(long, default_value_t = 20)]
+    Retro {
+        #[command(subcommand)]
+        cmd: RetroSub,
+    },
+    Discover {
+        #[arg(long, default_value_t = false)]
+        write: bool,
+        #[arg(long, default_value_t = 5.0)]
+        timeout: f64,
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
+    Check {
+        #[command(subcommand)]
+        cmd: CheckSub,
+    },
+    Queue {
+        #[command(subcommand)]
+        cmd: QueueSub,
+    },
+    Parse {
+        #[command(subcommand)]
+        cmd: ParseSub,
+    },
+    Parity {
+        #[arg(long)]
+        suite: Option<String>,
+    },
+    Wave {
+        #[arg(long)]
+        urls_file: PathBuf,
+        #[arg(long, default_value_t = 15)]
         limit: usize,
     },
+    Harvest {
+        #[arg(long)]
+        urls_file: PathBuf,
+        #[arg(long, default_value_t = 50)]
+        limit: usize,
+    },
+    Serial {
+        #[arg(long)]
+        urls_file: PathBuf,
+        #[arg(long, default_value_t = 100)]
+        limit: usize,
+    },
+    Version,
 }

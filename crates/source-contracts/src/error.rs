@@ -29,10 +29,7 @@ pub enum ContractError {
     SchemaCompile { name: String, message: String },
 
     #[error("contract `{name}` invalid: {message}")]
-    Invalid {
-        name: &'static str,
-        message: String,
-    },
+    Invalid { name: &'static str, message: String },
 }
 
 impl ContractError {

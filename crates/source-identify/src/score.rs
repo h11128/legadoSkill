@@ -164,12 +164,7 @@ mod tests {
     #[test]
     fn unknown_below_min_score() {
         let fam = SiteFamily::new(SiteFamily::GENERIC_FORM);
-        let rules = vec![fr(
-            "weak",
-            0.5,
-            FingerprintMatchKind::HtmlRegex,
-            r"form",
-        )];
+        let rules = vec![fr("weak", 0.5, FingerprintMatchKind::HtmlRegex, r"form")];
         let src = BookSource::new(json!({}));
         let families = [FamilyRules {
             family: &fam,
@@ -190,18 +185,8 @@ mod tests {
     fn unknown_when_margin_thin() {
         let a = SiteFamily::new("A");
         let b = SiteFamily::new("B");
-        let rules_a = vec![fr(
-            "a",
-            2.2,
-            FingerprintMatchKind::HtmlRegex,
-            r"alpha",
-        )];
-        let rules_b = vec![fr(
-            "b",
-            2.0,
-            FingerprintMatchKind::HtmlRegex,
-            r"beta",
-        )];
+        let rules_a = vec![fr("a", 2.2, FingerprintMatchKind::HtmlRegex, r"alpha")];
+        let rules_b = vec![fr("b", 2.0, FingerprintMatchKind::HtmlRegex, r"beta")];
         let src = BookSource::new(json!({}));
         let html = "alpha beta";
         let families = [

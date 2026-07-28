@@ -61,9 +61,8 @@ impl SourceRepository for McpSourceRepository {
 
     fn save(&self, source: &BookSource) -> Result<(), PortError> {
         self.ensure_ready()?;
-        let payload = serde_json::to_string(source.as_value()).map_err(|e| {
-            PortError::ContractViolation(format!("serialize source: {e}"))
-        })?;
+        let payload = serde_json::to_string(source.as_value())
+            .map_err(|e| PortError::ContractViolation(format!("serialize source: {e}")))?;
         let _ = self.client.tools_call(
             "save_source",
             json!({
@@ -79,9 +78,8 @@ impl SourceRepository for McpSourceRepository {
         let mut value = self.get(key)?.into_value();
         apply_disable(&mut value, DISABLE_TAG);
         self.ensure_ready()?;
-        let payload = serde_json::to_string(&value).map_err(|e| {
-            PortError::ContractViolation(format!("serialize source: {e}"))
-        })?;
+        let payload = serde_json::to_string(&value)
+            .map_err(|e| PortError::ContractViolation(format!("serialize source: {e}")))?;
         let _ = self.client.tools_call(
             "save_source",
             json!({

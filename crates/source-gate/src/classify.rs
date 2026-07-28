@@ -83,8 +83,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn rules() -> Vec<SkipRule> {
-        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../config/verify_skip_rules.json");
+        let p =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/verify_skip_rules.json");
         load_rules(&p).expect("rules")
     }
 
@@ -103,30 +103,19 @@ mod tests {
 
     #[test]
     fn deadish_maps_reasons() {
-        let wall = probe_from_html_fixture(
-            200,
-            "https://x/",
-            "<html>请输入密码</html>",
-        );
+        let wall = probe_from_html_fixture(200, "https://x/", "<html>请输入密码</html>");
         assert!(!wall.ok);
         let (reason, action) = deadish_reason_action(wall.deadish.as_deref());
         assert_eq!(reason, "l2_password_or_db_wall");
         assert_eq!(action, GateAction::Skip);
 
-        let park = probe_from_html_fixture(
-            200,
-            "https://x/",
-            "<html>domain has expired</html>",
-        );
+        let park = probe_from_html_fixture(200, "https://x/", "<html>domain has expired</html>");
         let (reason, action) = deadish_reason_action(park.deadish.as_deref());
         assert_eq!(reason, "l2_domain_parked_or_expired");
         assert_eq!(action, GateAction::Disable);
 
-        let shell = probe_from_html_fixture(
-            200,
-            "https://x/",
-            "<html>cf-browser-verification</html>",
-        );
+        let shell =
+            probe_from_html_fixture(200, "https://x/", "<html>cf-browser-verification</html>");
         let (reason, action) = deadish_reason_action(shell.deadish.as_deref());
         assert_eq!(reason, "l2_bot_shell");
         assert_eq!(action, GateAction::Skip);

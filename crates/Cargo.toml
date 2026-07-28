@@ -19,6 +19,10 @@ members = [
   "source-pattern",
   "source-adapters",
   "source-video",
+  "source-closeout",
+  "source-check",
+  "source-queue",
+  "source-parse",
 ]
 default-members = ["source-cli"]
 
@@ -46,6 +50,10 @@ source_identify = { path = "source-identify" }
 source_pattern = { path = "source-pattern" }
 source_adapters = { path = "source-adapters" }
 source_video = { path = "source-video" }
+source_closeout = { path = "source-closeout" }
+source_check = { path = "source-check" }
+source_queue = { path = "source-queue" }
+source_parse = { path = "source-parse" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

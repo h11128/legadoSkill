@@ -29,6 +29,22 @@ impl FsChannelPort {
     fn lock_path(&self) -> PathBuf {
         self.root.join("temp/mcp_channel.lock")
     }
+
+    /// Hold bulk runner lock (`temp/full_check/runner.lock`) for batch MCP check.
+    pub fn acquire_bulk(&self) -> Result<FsChannelGuard, PortError> {
+        let snap = status(&self.root)?;
+        if snap.get("idle").and_then(|v| v.as_bool()) != Some(true) {
+            return Err(PortError::ChannelBusy(format!(
+                "MCP channel busy: {}",
+                snap.get("holders").unwrap_or(&json!([]))
+            )));
+        }
+        acquire_lock(
+            &self.root,
+            "bulk",
+            &self.root.join("temp/full_check/runner.lock"),
+        )
+    }
 }
 
 /// Drop releases repair lock when pid matches.
@@ -51,7 +67,12 @@ impl ChannelPort for FsChannelPort {
 
     fn assert_idle_for_repair(&self) -> Result<(), PortError> {
         let snap = status(&self.root)?;
-        for h in snap.get("holders").and_then(|h| h.as_array()).into_iter().flatten() {
+        for h in snap
+            .get("holders")
+            .and_then(|h| h.as_array())
+            .into_iter()
+            .flatten()
+        {
             let owner = h.get("owner").and_then(|o| o.as_str()).unwrap_or("");
             let path = h.get("path").and_then(|p| p.as_str()).unwrap_or("");
             if owner == "bulk" || path.contains("runner.lock") {
@@ -73,28 +94,29 @@ impl ChannelPort for FsChannelPort {
                 snap.get("holders").unwrap_or(&json!([]))
             )));
         }
-        let pid = std::process::id();
-        let lock = self.lock_path();
-        if let Some(parent) = lock.parent() {
-            fs::create_dir_all(parent).map_err(|e| {
-                PortError::Permanent(format!("mkdir {}: {e}", parent.display()))
-            })?;
-        }
-        let payload = json!({
-            "owner": "repair",
-            "role": "repair",
-            "pid": pid,
-            "mtime": now_s(),
-        });
-        fs::write(&lock, payload.to_string()).map_err(|e| {
-            PortError::Permanent(format!("write lock: {e}"))
-        })?;
-        Ok(FsChannelGuard {
-            root: self.root.clone(),
-            owner: "repair".into(),
-            pid,
-        })
+        acquire_lock(&self.root, "repair", &self.lock_path())
     }
+}
+
+fn acquire_lock(root: &Path, owner: &str, lock: &Path) -> Result<FsChannelGuard, PortError> {
+    let pid = std::process::id();
+    if let Some(parent) = lock.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| PortError::Permanent(format!("mkdir {}: {e}", parent.display())))?;
+    }
+    let payload = json!({
+        "owner": owner,
+        "role": owner,
+        "pid": pid,
+        "mtime": now_s(),
+    });
+    fs::write(lock, payload.to_string())
+        .map_err(|e| PortError::Permanent(format!("write lock: {e}")))?;
+    Ok(FsChannelGuard {
+        root: root.to_path_buf(),
+        owner: owner.into(),
+        pid,
+    })
 }
 
 fn now_s() -> f64 {
@@ -104,7 +126,7 @@ fn now_s() -> f64 {
         .unwrap_or(0.0)
 }
 
-fn status(root: &Path) -> Result<Value, PortError> {
+pub fn status(root: &Path) -> Result<Value, PortError> {
     let paths = [
         (root.join("temp/mcp_channel.lock"), "repair"),
         (root.join("temp/full_check/runner.lock"), "bulk"),
@@ -140,9 +162,8 @@ fn read_lock(path: &Path) -> Result<Option<Value>, PortError> {
     if !path.exists() {
         return Ok(None);
     }
-    let raw = fs::read_to_string(path).map_err(|e| {
-        PortError::Permanent(format!("read {}: {e}", path.display()))
-    })?;
+    let raw = fs::read_to_string(path)
+        .map_err(|e| PortError::Permanent(format!("read {}: {e}", path.display())))?;
     let trimmed = raw.trim();
     if trimmed.starts_with('{') {
         match serde_json::from_str::<Value>(trimmed) {

@@ -5,9 +5,9 @@ use source_types::{
     OptimizePlan, PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use source_types::RepairContext;
 use crate::form::search_url_from_html;
 use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
 
 pub static JIEQI_MOBILE_RULES: &[FingerprintRule] = &[];
 

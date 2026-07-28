@@ -5,9 +5,9 @@ use source_types::{
     PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use source_types::RepairContext;
 use crate::form::search_url_from_html;
 use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
 
 pub static GENERIC_FORM_RULES: &[FingerprintRule] = &[];
 
@@ -38,7 +38,11 @@ impl FamilyPlugin for GenericForm {
 }
 
 impl GenericForm {
-    fn plan_from_form(&self, ctx: &RepairContext, capability: Capability) -> AdapterOutcome<PatchPlan> {
+    fn plan_from_form(
+        &self,
+        ctx: &RepairContext,
+        capability: Capability,
+    ) -> AdapterOutcome<PatchPlan> {
         let html = ctx.html_text();
         if html.trim().is_empty() {
             let url = ctx.primary_url().ok();

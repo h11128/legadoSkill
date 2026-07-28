@@ -4,12 +4,9 @@ use regex::Regex;
 
 /// Best-effort form → Legado `searchUrl` template. Relative actions keep leading `/`.
 pub fn search_url_from_html(html: &str, base: &str) -> Option<String> {
-    let form_re = Regex::new(
-        r#"(?is)<form[^>]*action\s*=\s*["']([^"']+)["'][^>]*>(.*?)</form>"#,
-    )
-    .ok()?;
-    let input_re =
-        Regex::new(r#"(?is)<input[^>]*name\s*=\s*["']([^"']+)["'][^>]*>"#).ok()?;
+    let form_re =
+        Regex::new(r#"(?is)<form[^>]*action\s*=\s*["']([^"']+)["'][^>]*>(.*?)</form>"#).ok()?;
+    let input_re = Regex::new(r#"(?is)<input[^>]*name\s*=\s*["']([^"']+)["'][^>]*>"#).ok()?;
 
     let mut best: Option<(i32, String)> = None;
     for cap in form_re.captures_iter(html) {

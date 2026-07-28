@@ -55,10 +55,7 @@ pub fn load_routes(path: impl AsRef<Path>) -> Result<Vec<RouteRule>> {
             continue;
         }
         let id = raw.id.clone().unwrap_or_default();
-        let flow = raw
-            .flow
-            .clone()
-            .unwrap_or_else(|| "video".into());
+        let flow = raw.flow.clone().unwrap_or_else(|| "video".into());
         let reason = raw
             .reason
             .clone()
@@ -83,8 +80,8 @@ pub fn load_routes(path: impl AsRef<Path>) -> Result<Vec<RouteRule>> {
 pub fn route_url(url: &str, routes: &[RouteRule]) -> VideoRoute {
     for rule in routes {
         if rule.re.is_match(url) {
-            let is_media = rule.flow.eq_ignore_ascii_case("video")
-                || rule.flow.eq_ignore_ascii_case("file");
+            let is_media =
+                rule.flow.eq_ignore_ascii_case("video") || rule.flow.eq_ignore_ascii_case("file");
             return VideoRoute {
                 url: url.to_string(),
                 flow: rule.flow.clone(),

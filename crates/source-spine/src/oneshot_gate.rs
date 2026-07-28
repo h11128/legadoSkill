@@ -27,9 +27,10 @@ pub(crate) fn channel_busy_result(
     );
     report.family = Some(ctx.family.clone());
     let report_line = emit_report_json(&report)?;
-    let gate = ctx.gate.clone().unwrap_or_else(|| {
-        GateResult::new(report.url.clone(), GateAction::Skip, "channel_busy")
-    });
+    let gate = ctx
+        .gate
+        .clone()
+        .unwrap_or_else(|| GateResult::new(report.url.clone(), GateAction::Skip, "channel_busy"));
     Ok(OneshotResult {
         report,
         report_line,
@@ -39,7 +40,10 @@ pub(crate) fn channel_busy_result(
     })
 }
 
-pub(crate) fn skipped_gate(ctx: &RepairContext, gate: GateResult) -> Result<OneshotResult, SpineError> {
+pub(crate) fn skipped_gate(
+    ctx: &RepairContext,
+    gate: GateResult,
+) -> Result<OneshotResult, SpineError> {
     let (status, capability) = if gate.action == GateAction::Disable {
         (ReportStatus::Disabled, Capability::Disable)
     } else {
@@ -180,12 +184,7 @@ pub(crate) fn ledger_gate<L: LedgerPort, K: Clock>(
     gate: &GateResult,
 ) -> Result<(), SpineError> {
     let ts = clock.now_utc().to_rfc3339();
-    let mut row = LedgerRow::new(
-        ts,
-        gate.url.clone(),
-        LedgerStep::Gate,
-        gate.action.as_str(),
-    );
+    let mut row = LedgerRow::new(ts, gate.url.clone(), LedgerStep::Gate, gate.action.as_str());
     row.note = Some(gate.reason.clone());
     row.capability = Some(ctx.capability);
     row.family = Some(ctx.family.clone());

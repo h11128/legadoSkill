@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 
 use serde_json::{json, Value};
-use source_types::{
-    Fingerprint, PartialBookSource, PatternCluster, RepairConfig, SiteFamily, Url,
-};
+use source_types::{Fingerprint, PartialBookSource, PatternCluster, RepairConfig, SiteFamily, Url};
 
 use crate::fields::{chapter_list, content_rule, search_book_list, search_url, source_type};
 use crate::hash::{normalize_search_url_shape, structural_hash_from_source};
@@ -49,18 +47,16 @@ pub fn cluster_verify_ok(
         exemplars.sort_by(|a, b| a.as_str().cmp(b.as_str()));
         exemplars.truncate(5);
         let size = members.len() as u32;
-        let mut cluster = PatternCluster::new(
-            family,
-            size,
-            fingerprint,
-            centroid,
-            exemplars,
-            extracted_at,
-        );
+        let mut cluster =
+            PatternCluster::new(family, size, fingerprint, centroid, exemplars, extracted_at);
         cluster.coverage = coverage;
         out.push(cluster);
     }
-    out.sort_by(|a, b| a.fingerprint.structural_hash.cmp(&b.fingerprint.structural_hash));
+    out.sort_by(|a, b| {
+        a.fingerprint
+            .structural_hash
+            .cmp(&b.fingerprint.structural_hash)
+    });
     out
 }
 
@@ -91,18 +87,20 @@ fn mode_string(values: &[String]) -> Option<String> {
         .map(|(s, _)| s.to_string())
 }
 
-fn field_values(members: &[&ClusterSample], getter: fn(&source_types::BookSource) -> Option<String>) -> Vec<String> {
+fn field_values(
+    members: &[&ClusterSample],
+    getter: fn(&source_types::BookSource) -> Option<String>,
+) -> Vec<String> {
     members.iter().filter_map(|m| getter(&m.source)).collect()
 }
 
-fn centroid_and_coverage(
-    members: &[&ClusterSample],
-) -> (PartialBookSource, HashMap<String, f64>) {
+fn centroid_and_coverage(members: &[&ClusterSample]) -> (PartialBookSource, HashMap<String, f64>) {
     let n = members.len() as f64;
     let mut coverage = HashMap::new();
     let mut obj = serde_json::Map::new();
 
-    let pairs: [(&str, fn(&source_types::BookSource) -> Option<String>); 4] = [
+    type RuleGetter = fn(&source_types::BookSource) -> Option<String>;
+    let pairs: [(&str, RuleGetter); 4] = [
         ("searchUrl", search_url),
         ("ruleSearch.bookList", search_book_list),
         ("ruleToc.chapterList", chapter_list),
@@ -177,7 +175,14 @@ mod tests {
         assert_eq!(clusters.len(), 1);
         assert_eq!(clusters[0].size, 3);
         assert!(clusters[0].family.is_provisional_cluster());
-        assert!(clusters[0].coverage.get("searchUrl").copied().unwrap_or(0.0) >= 1.0);
+        assert!(
+            clusters[0]
+                .coverage
+                .get("searchUrl")
+                .copied()
+                .unwrap_or(0.0)
+                >= 1.0
+        );
     }
 
     #[test]

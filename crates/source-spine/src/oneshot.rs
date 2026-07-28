@@ -19,6 +19,7 @@ use crate::plugin::identify_stub;
 use source_types::ReportJson;
 
 /// Injected gate result or callable classifier.
+#[allow(clippy::large_enum_variant)]
 pub enum GateInput<'a> {
     Injected(GateResult),
     Fn(&'a dyn GateFn),
@@ -64,6 +65,7 @@ pub struct OneshotResult {
 }
 
 /// Optional diagnose input: precomputed, from debug text via port, or skip.
+#[allow(clippy::large_enum_variant)]
 pub enum DiagnoseInput<'a> {
     /// Already computed (tests / CLI).
     Ready(source_types::DiagnoseResult),
@@ -129,14 +131,7 @@ where
             }
             if d.layer == Layer::Ok {
                 ctx.diagnose = Some(d.clone());
-                return diagnose_ok_verify(
-                    &ctx,
-                    gate,
-                    &d,
-                    ports.verify,
-                    ports.ledger,
-                    ports.clock,
-                );
+                return diagnose_ok_verify(&ctx, gate, &d, ports.verify, ports.ledger, ports.clock);
             }
             ctx.diagnose = Some(d);
         }
@@ -156,14 +151,7 @@ where
             }
             if d.layer == Layer::Ok {
                 ctx.diagnose = Some(d.clone());
-                return diagnose_ok_verify(
-                    &ctx,
-                    gate,
-                    &d,
-                    ports.verify,
-                    ports.ledger,
-                    ports.clock,
-                );
+                return diagnose_ok_verify(&ctx, gate, &d, ports.verify, ports.ledger, ports.clock);
             }
             ctx.diagnose = Some(d);
         }

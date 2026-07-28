@@ -44,10 +44,7 @@ impl FamilyPlugin for NoopRepairPlugin {
 impl RepairPlugin for NoopRepairPlugin {
     fn repair(&self, ctx: &RepairContext) -> AdapterOutcome<PatchPlan> {
         AdapterOutcome::Unrepairable(Unrepairable::new(
-            format!(
-                "noop plugin: no adapter for family {}",
-                ctx.family.as_str()
-            ),
+            format!("noop plugin: no adapter for family {}", ctx.family.as_str()),
             GateAction::Skip,
         ))
     }

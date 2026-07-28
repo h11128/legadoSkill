@@ -30,7 +30,11 @@ fn absolutize(template: &str, base: &str) -> String {
             return format!("{}://{}{}", u.scheme(), u.host_str().unwrap_or(""), t);
         }
     }
-    format!("{}/{}", base.trim_end_matches('/'), t.trim_start_matches('/'))
+    format!(
+        "{}/{}",
+        base.trim_end_matches('/'),
+        t.trim_start_matches('/')
+    )
 }
 
 fn is_post_template(su: &str) -> bool {

@@ -59,14 +59,11 @@ mod tests {
 
     struct NoopVerify;
     impl VerifyPort for NoopVerify {
-        fn check(
-            &self,
-            key: &SourceKey,
-            opts: CheckOpts,
-        ) -> Result<VerifyResult, PortError> {
+        fn check(&self, key: &SourceKey, opts: CheckOpts) -> Result<VerifyResult, PortError> {
             assert!(!opts.check_discovery);
             Ok(VerifyResult::new(
-                key.to_url().map_err(|e| PortError::ContractViolation(e.to_string()))?,
+                key.to_url()
+                    .map_err(|e| PortError::ContractViolation(e.to_string()))?,
                 true,
                 "ok",
                 source_types::Mode::Oneshot,
@@ -132,7 +129,12 @@ mod tests {
             rows: RefCell::new(Vec::new()),
         };
         ledger
-            .append(&LedgerRow::new("2026-07-26T00:00:00Z", url, LedgerStep::Check, "ok"))
+            .append(&LedgerRow::new(
+                "2026-07-26T00:00:00Z",
+                url,
+                LedgerStep::Check,
+                "ok",
+            ))
             .unwrap();
         assert_eq!(ledger.rows.borrow().len(), 1);
 

@@ -37,12 +37,10 @@ impl McpEndpoint {
     }
 
     pub fn load_path(path: &Path) -> Result<Self, PortError> {
-        let raw = fs::read_to_string(path).map_err(|e| {
-            PortError::Permanent(format!("read {}: {e}", path.display()))
-        })?;
-        let data: DefaultsFile = serde_json::from_str(&raw).map_err(|e| {
-            PortError::ContractViolation(format!("mcp_defaults.json: {e}"))
-        })?;
+        let raw = fs::read_to_string(path)
+            .map_err(|e| PortError::Permanent(format!("read {}: {e}", path.display())))?;
+        let data: DefaultsFile = serde_json::from_str(&raw)
+            .map_err(|e| PortError::ContractViolation(format!("mcp_defaults.json: {e}")))?;
         let token = data
             .token
             .filter(|t| !t.is_empty())

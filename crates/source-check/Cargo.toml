@@ -1,0 +1,13 @@
+[package]
+name = "source_check"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+source_mcp = { workspace = true }
+source_ports = { workspace = true }
+source_types = { workspace = true }
+ureq = { workspace = true }
+url = { workspace = true }

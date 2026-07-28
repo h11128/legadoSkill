@@ -59,13 +59,11 @@ impl JsonlLedgerPort {
 impl LedgerPort for JsonlLedgerPort {
     fn append(&self, row: &LedgerRow) -> Result<(), PortError> {
         if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent).map_err(|e| {
-                PortError::Permanent(format!("mkdir {}: {e}", parent.display()))
-            })?;
+            fs::create_dir_all(parent)
+                .map_err(|e| PortError::Permanent(format!("mkdir {}: {e}", parent.display())))?;
         }
-        let line = serde_json::to_string(row).map_err(|e| {
-            PortError::ContractViolation(format!("ledger json: {e}"))
-        })?;
+        let line = serde_json::to_string(row)
+            .map_err(|e| PortError::ContractViolation(format!("ledger json: {e}")))?;
         let mut f = OpenOptions::new()
             .create(true)
             .append(true)
@@ -83,9 +81,7 @@ pub struct SqliteLedgerPort {
 
 impl SqliteLedgerPort {
     pub fn new(db: Db) -> Self {
-        Self {
-            db: Mutex::new(db),
-        }
+        Self { db: Mutex::new(db) }
     }
 
     pub fn open(path: impl AsRef<Path>) -> Result<Self, PortError> {

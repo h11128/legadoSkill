@@ -15,9 +15,7 @@ pub struct BookListHints {
 
 fn re_charset() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r#"(?i)charset\s*=\s*["']?\s*(gbk|gb2312|gb18030)"#).unwrap()
-    })
+    RE.get_or_init(|| Regex::new(r#"(?i)charset\s*=\s*["']?\s*(gbk|gb2312|gb18030)"#).unwrap())
 }
 
 /// True when homepage / search page declares GB family charset.

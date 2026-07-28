@@ -89,7 +89,10 @@ impl VerifyPort for McpVerifyPort {
                     .and_then(|m| m.as_str())
                     .unwrap_or("")
                     .to_string();
-                let device_ok = row.get("success").and_then(|s| s.as_bool()).unwrap_or(false);
+                let device_ok = row
+                    .get("success")
+                    .and_then(|s| s.as_bool())
+                    .unwrap_or(false);
                 let success = if device_ok {
                     true
                 } else if !opts.check_discovery {
@@ -106,9 +109,9 @@ impl VerifyPort for McpVerifyPort {
             ),
         };
 
-        let url_typed = key.to_url().map_err(|e| {
-            PortError::ContractViolation(e.to_string())
-        })?;
+        let url_typed = key
+            .to_url()
+            .map_err(|e| PortError::ContractViolation(e.to_string()))?;
         let mut vr = VerifyResult::new(url_typed, ok, message, Mode::Oneshot);
         vr.check_discovery = opts.check_discovery;
         vr.duration_ms = Some(started.elapsed().as_millis() as u64);
@@ -133,7 +136,7 @@ fn check_args(url: &str, keyword: &str, timeout_ms: u64, check_discovery: bool) 
     })
 }
 
-fn wait_check(client: &McpClient, max_wait_s: f64) -> Result<Value, PortError> {
+pub(crate) fn wait_check(client: &McpClient, max_wait_s: f64) -> Result<Value, PortError> {
     let started = Instant::now();
     let mut interval = Duration::from_millis(400);
     let poll_max = Duration::from_millis(1200);
@@ -166,7 +169,7 @@ fn wait_check(client: &McpClient, max_wait_s: f64) -> Result<Value, PortError> {
     }
 }
 
-fn fetch_all_results(client: &McpClient, seed: &Value) -> Result<Value, PortError> {
+pub(crate) fn fetch_all_results(client: &McpClient, seed: &Value) -> Result<Value, PortError> {
     let mut all = Vec::new();
     let mut offset = 0usize;
     let mut total = seed
@@ -209,11 +212,13 @@ fn fetch_all_results(client: &McpClient, seed: &Value) -> Result<Value, PortErro
     Ok(last)
 }
 
-fn match_result(snap: &Value, url: &str) -> Option<Value> {
+pub(crate) fn match_result(snap: &Value, url: &str) -> Option<Value> {
     let results = snap.get("results")?.as_array()?;
     for row in results {
         let row_url = row.get("url").and_then(|u| u.as_str())?;
-        if row_url == url || row_url.trim() == url.trim() {
+        let want = url.trim().trim_end_matches('/');
+        let got = row_url.trim().trim_end_matches('/');
+        if row_url == url || got == want {
             return Some(row.clone());
         }
     }
@@ -221,14 +226,9 @@ fn match_result(snap: &Value, url: &str) -> Option<Value> {
     None
 }
 
-fn is_repair_success(message: &str) -> bool {
+pub(crate) fn is_repair_success(message: &str) -> bool {
     let mut msg = message.to_string();
-    for tok in [
-        "发现正文失效",
-        "发现目录失效",
-        "发现规则为空",
-        "发现失效",
-    ] {
+    for tok in ["发现正文失效", "发现目录失效", "发现规则为空", "发现失效"] {
         msg = msg.replace(tok, "");
     }
     let cleaned: String = msg

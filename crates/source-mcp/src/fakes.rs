@@ -6,9 +6,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use source_ports::{ChannelGuard, ChannelPort, Clock, LedgerPort, SourceRepository, VerifyPort};
-use source_types::{
-    BookSource, CheckOpts, LedgerRow, Mode, PortError, SourceKey, VerifyResult,
-};
+use source_types::{BookSource, CheckOpts, LedgerRow, Mode, PortError, SourceKey, VerifyResult};
 
 /// Thread-safe in-memory `SourceRepository`.
 pub struct MemSourceRepository {
@@ -214,7 +212,7 @@ mod tests {
         repo.disable(&key).unwrap();
         let disabled = repo.get(&key).unwrap();
         assert_eq!(disabled.as_value()["enabled"], false);
-        repo.delete(&[key.clone()]).unwrap();
+        repo.delete(std::slice::from_ref(&key)).unwrap();
         assert!(repo.get(&key).is_err());
     }
 

@@ -13,7 +13,9 @@ pub enum LedgerCmd {
         result: String,
         note: Option<String>,
     },
-    Show { limit: usize },
+    Show {
+        limit: usize,
+    },
 }
 
 pub fn run_ledger(cmd: LedgerCmd) -> ExitCode {
@@ -43,6 +45,7 @@ pub fn run_ledger(cmd: LedgerCmd) -> ExitCode {
                 "diagnose" => LedgerStep::Diagnose,
                 "patch" | "apply" => LedgerStep::Apply,
                 "check" | "verify" => LedgerStep::Check,
+                "skip" => LedgerStep::Skip,
                 "migrate" => LedgerStep::Migrate,
                 "hunt" => LedgerStep::Hunt,
                 _ => LedgerStep::Check,

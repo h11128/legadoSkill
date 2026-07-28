@@ -5,8 +5,8 @@ use source_types::{
     OptimizePlan, PatchOp, PatchPlan, SiteFamily, Unrepairable,
 };
 
-use source_types::RepairContext;
 use source_ports::{CreatePlugin, FamilyPlugin, OptimizePlugin, RepairPlugin};
+use source_types::RepairContext;
 
 pub static FICTION_LIST_XCHINA_RULES: &[FingerprintRule] = &[];
 
@@ -73,7 +73,10 @@ impl FictionListXchina {
         let mut ops = vec![
             PatchOp::set("ruleSearch.bookList", serde_json::json!(".item.fiction")),
             PatchOp::set("ruleSearch.name", serde_json::json!(".title a, a.title")),
-            PatchOp::set("ruleSearch.bookUrl", serde_json::json!(".title a@href, a.title@href")),
+            PatchOp::set(
+                "ruleSearch.bookUrl",
+                serde_json::json!(".title a@href, a.title@href"),
+            ),
         ];
         if low.contains("fiction-body") {
             ops.push(PatchOp::set(

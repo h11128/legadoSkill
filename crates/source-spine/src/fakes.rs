@@ -6,9 +6,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use source_ports::{ChannelGuard, ChannelPort, Clock, LedgerPort, SourceRepository, VerifyPort};
-use source_types::{
-    BookSource, CheckOpts, LedgerRow, Mode, PortError, SourceKey, VerifyResult,
-};
+use source_types::{BookSource, CheckOpts, LedgerRow, Mode, PortError, SourceKey, VerifyResult};
 
 #[derive(Debug, Default)]
 pub struct MemRepo {

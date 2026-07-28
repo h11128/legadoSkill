@@ -12,7 +12,9 @@ pub(crate) fn apply_ops_to_source(
 ) -> Result<BookSource, SpineError> {
     let mut root = before.clone().into_value();
     if !root.is_object() {
-        return Err(SpineError::Contract("BookSource root must be object".into()));
+        return Err(SpineError::Contract(
+            "BookSource root must be object".into(),
+        ));
     }
     let mut pairs: Vec<(String, Option<Value>)> = Vec::with_capacity(ops.len());
     for op in ops {

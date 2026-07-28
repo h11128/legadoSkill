@@ -2,8 +2,8 @@
 
 use source_types::{AdapterOutcome, PatchPlan, SiteFamily};
 
-use source_types::RepairContext;
 use crate::registry::AdapterRegistry;
+use source_types::RepairContext;
 
 /// Create via identified family; Unknown → GenericForm.
 pub fn create_via_registry(

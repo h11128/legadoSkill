@@ -18,9 +18,7 @@ impl Url {
         }
         let lower = trimmed.to_ascii_lowercase();
         if !(lower.starts_with("http://") || lower.starts_with("https://")) {
-            return Err(TypeError::InvalidUrl(format!(
-                "must be http(s): {trimmed}"
-            )));
+            return Err(TypeError::InvalidUrl(format!("must be http(s): {trimmed}")));
         }
         // Normalize scheme casing for downstream parsers (Url crate).
         let normalized = if trimmed.len() >= 8 && lower.starts_with("https://") {
@@ -65,8 +63,8 @@ impl HostKey {
     }
 
     pub fn from_url(url: &Url) -> Result<Self, TypeError> {
-        let parsed = ::url::Url::parse(url.as_str())
-            .map_err(|e| TypeError::InvalidUrl(e.to_string()))?;
+        let parsed =
+            ::url::Url::parse(url.as_str()).map_err(|e| TypeError::InvalidUrl(e.to_string()))?;
         let host = parsed
             .host_str()
             .ok_or_else(|| TypeError::InvalidUrl("missing host".into()))?;

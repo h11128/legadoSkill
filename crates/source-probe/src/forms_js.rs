@@ -17,9 +17,7 @@ fn action_re() -> &'static Regex {
 
 fn method_post_near_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r#"(?i)method\\?=['"]post['"]|method=['"]post['"]"#).unwrap()
-    })
+    RE.get_or_init(|| Regex::new(r#"(?i)method\\?=['"]post['"]|method=['"]post['"]"#).unwrap())
 }
 
 /// Parse search forms embedded in JS (Python `forms_from_js`).
@@ -64,7 +62,10 @@ pub fn forms_from_js(js: &str, base: &str) -> Vec<ProbeForm> {
 
 fn join_url(base: Option<&Url>, rel: &str) -> String {
     match base {
-        Some(b) => b.join(rel).map(|u| u.to_string()).unwrap_or_else(|_| rel.to_string()),
+        Some(b) => b
+            .join(rel)
+            .map(|u| u.to_string())
+            .unwrap_or_else(|_| rel.to_string()),
         None => rel.to_string(),
     }
 }
@@ -112,7 +113,8 @@ mod tests {
 
     #[test]
     fn parses_writeln_action() {
-        let js = r#"document.writeln("<form action='/modules/article/search.php' method='post'>");"#;
+        let js =
+            r#"document.writeln("<form action='/modules/article/search.php' method='post'>");"#;
         let forms = forms_from_js(js, "https://m.ex.com/");
         assert!(!forms.is_empty());
         assert!(forms[0].action.contains("search.php"));

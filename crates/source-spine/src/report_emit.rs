@@ -10,11 +10,9 @@ pub const REPORT_JSON_PREFIX: &str = "REPORT_JSON:";
 
 /// Emit `REPORT_JSON:` + compact JSON after schema validation (anti fake-fixed).
 pub fn emit_report_json(report: &ReportJson) -> Result<String, SpineError> {
-    let value = serde_json::to_value(report)
-        .map_err(|e| SpineError::Internal(e.to_string()))?;
+    let value = serde_json::to_value(report).map_err(|e| SpineError::Internal(e.to_string()))?;
     validate_report(&value).map_err(|e| SpineError::Contract(e.to_string()))?;
-    let body =
-        serde_json::to_string(report).map_err(|e| SpineError::Internal(e.to_string()))?;
+    let body = serde_json::to_string(report).map_err(|e| SpineError::Internal(e.to_string()))?;
     Ok(format!("{REPORT_JSON_PREFIX}{body}"))
 }
 

@@ -133,10 +133,7 @@ pub fn pick_best(ranked: &[RankedCandidate]) -> Option<ProbeBest> {
             return Some(to_best(r));
         }
     }
-    ranked
-        .iter()
-        .find(|r| !r.dead && r.score > 0)
-        .map(to_best)
+    ranked.iter().find(|r| !r.dead && r.score > 0).map(to_best)
 }
 
 fn to_best(r: &RankedCandidate) -> ProbeBest {

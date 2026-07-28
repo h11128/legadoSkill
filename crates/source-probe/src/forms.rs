@@ -84,16 +84,13 @@ pub fn forms_from_html(html: &str, base: &str) -> Vec<ProbeForm> {
 
 fn join_url(base: Option<&Url>, rel: &str) -> String {
     match base {
-        Some(b) => b
-            .join(rel)
-            .map(|u| u.to_string())
-            .unwrap_or_else(|_| {
-                if rel.is_empty() {
-                    b.to_string()
-                } else {
-                    rel.to_string()
-                }
-            }),
+        Some(b) => b.join(rel).map(|u| u.to_string()).unwrap_or_else(|_| {
+            if rel.is_empty() {
+                b.to_string()
+            } else {
+                rel.to_string()
+            }
+        }),
         None => rel.to_string(),
     }
 }
@@ -178,7 +175,7 @@ fn candidate_from_form(f: &ProbeForm) -> Option<SearchCandidate> {
         if fields.contains("searchtype") {
             body.push_str("&searchtype=all");
         }
-        if field_names.iter().any(|x| *x == "t") && fields.contains("searchkey") {
+        if field_names.contains(&"t") && fields.contains("searchkey") {
             body.push_str("&t=1");
         }
         return Some(SearchCandidate {

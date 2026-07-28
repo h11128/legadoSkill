@@ -9,8 +9,8 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
 
 ## Hard bans
 
-1. **Never claim `fixed` without device verify** (`repair_one` or `repair_source.py verify` → success).
-2. **Never run fix while bulk owns MCP** — `repair_source.py channel` must be idle.
+1. **Never claim `fixed` without device verify** (`source-cli repair` → 校验成功).
+2. **Never run fix while bulk owns MCP** — `source-cli check channel` must be idle.
 3. **One phone = one check/debug job** (MCP single-flight). Do **parallel PC** work
    (fetch HTML / triage / prepare patches) and **one batch** `start_check_sources` for many URLs.
    Do not run two `debug_source` / check jobs on the same device.
@@ -21,35 +21,33 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
    「搜索目录失效」is ambiguous — 画本=TOC, 御书屋=dead search; never guess from Chinese alone.
 6. **Wave is triage, not fix**: `repair_wave` may only apply *meaningful* smells; rate-only ≠ fixed.
 7. **Never rewrite search rules** on rate-limit HTML — rely on EWMA cooldown cache.
-8. **Never create** `inspect_*.py` when `repair_diagnose` / `repair_source.py fetch` covers it.
-9. **Prefer** `repair_wave` → `repair_diagnose` → layer patch → batch/single verify.
+8. **Never create** ad-hoc inspect scripts — use `source-cli diagnose` / `probe`.
+9. **Prefer** `source-cli wave` → `diagnose` → layer patch → verify.
 10. Wall-time budgets (do not pad):
    - Root cause known, 1–2 field patch + verify: **≤1 min** (aim **30–45s**).
    - Diagnose + HTML + patch: target **2–3 min**.
    - Soft warn **4 min**; hard stop **5 min** → skip + ledger.
-11. **Never end a source attempt without** `repair_session_log.py append`.
+11. **Never end a source attempt without** `source-cli ledger append`.
 12. **After domain migrate**: fetch new search form HTML before verify.
-13. **If debug OK but check fails** (下载链接为空 / ~100ms): `repair_debug_vs_check.py` first
-    (bookUrl → infoHtml trap).
+13. **If debug OK but check fails** (下载链接为空 / ~100ms): run `source-cli diagnose --debug-file …` first
+ (bookUrl → infoHtml trap).
 14. **After every source attempt (fixed / skip / fail), mandatory close-out loop** — do not
     pick the next URL until these finish:
     1. **Document**: short note in `docs/source-repair-retrospective.md` (or dated retro)
-       + `repair_session_log.py append` / `source-cli ledger`.
-    2. **Reflect**: `repair_retro.py append` with `trap` / `harness` / `script_fix` /
+       + `source-cli ledger append` / `source-cli retro append`.
+    2. **Reflect**: `source-cli retro append` with `trap` / `harness` / `script_fix` /
        `skill_fix` filled honestly (what burned time, what the agent missed).
-    3. **Improve**: **only when novel trap or harness gap** — patch SKILL and/or code then.
+    3. **Improve**: **only when novel trap or harness gap** — patch SKILL and/or Rust then.
        Do **not** change skill/Rust if trap already in SKILL Traps table (skill_fix=0 is correct).
-       `repair_retro append` **validates trap at write**; `skill_fix=1` **auto-syncs** Cursor SKILL.
-       `progress next` **blocks** until `repair_closeout_check.py pending` passes
+       `source-cli retro append` **validates trap at write**; `skill_fix` **auto-syncs** Cursor SKILL.
+       `source-cli progress next` **blocks** until `source-cli closeout pending` passes
        (see `docs/repair-closeout-gate.md`). Skipping doc/retro is a process failure;
        skipping skill/Rust on **known** traps is **correct**.
-17. **Structural close-out** — enforced by code, not prose alone:
- - `repair_retro.py append` rejects invalid trap/skill_fix
- - CLI `repair_retro.py append --status fail|skip` seals a `final:true` ledger row,
- so a given-up URL is never re-picked (do **not** hand-write `skip:` rows to fake this).
- Automated loops (`repair_serial`, L2 auto-skip) use `seal=False` — their fails stay retryable.
-    - `repair_progress.py next` / `source-cli progress next` call `pending` first
-    - Do not force skill/Rust on `known:…` or existing SKILL traps
+17. **Structural close-out** — enforced by Rust (`source-closeout`), not prose alone:
+ - `source-cli retro append` rejects invalid trap/skill_fix
+ - CLI `source-cli retro append --status fail|skip` seals a `final:true` ledger row
+ - Automated batch loops use `--no-seal` equivalent (library `seal=false`) — fails stay retryable
+ - `source-cli progress next` calls closeout pending first
 18. **Auto-commit before next URL** — after close-out, if SKILL / scripts / Rust /
     retrospective docs changed this URL, `git commit` those files **before**
     `progress next`. Do not leave skill/script fixes uncommitted across sources.
@@ -70,23 +68,17 @@ Standing rules for any 书源 fix / validate / bulk-check work in this workspace
 ## Required path
 
 ```
-repair_source.py channel
-# Prefer Rust oneshot when available:
-#   source-cli gate --url … | source-cli repair --url …
-python scripts/repair_wave.py --urls-file urls.txt   # parallel PC patch + one batch verify
-# or single:
-python scripts/repair_one.py --url … --fail-msg …
-python scripts/repair_session_log.py append --url … --step check --result '…'
-python scripts/repair_retro.py append --url … --status fixed|skip|fail --msg '…' \
-  --trap '…' --harness '…' --script-fix '…' --skill-fix 1
-python scripts/repair_closeout_check.py pending   # progress next 自动调用
-python scripts/repair_closeout_check.py gate --trap … --skill-fix …
-# then edit skill / Rust|Python only if trap is novel or harness gap is real
+source-cli check channel
+source-cli gate --url …
+source-cli diagnose --url … --key 我的
+source-cli repair --mode oneshot --url …
+source-cli ledger append --url … --step check --result '校验成功'
+source-cli retro append --url … --status fixed --trap '…' --skill-fix 0
+source-cli closeout pending   # progress next 自动调用
+source-cli progress next
 ```
 
-Python scripts remain valid until §12 cutover; prefer `source-cli` for gate/oneshot when the bin is built.
-
-Cache: `temp/full_fix/cache/`. MCP: `config/mcp_defaults.json`.  
+Cache: `temp/full_fix/cache/`. MCP: `config/mcp_defaults.json`. 
 Ledger: `temp/full_fix/repair_session_ledger.jsonl`.  
 Retros: `docs/source-repair-retrospective.md`, `docs/source-repair-retro-migrate-video-2026-07-26.md`,
 `temp/full_fix/repair_serial_retro.jsonl`.

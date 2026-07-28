@@ -12,9 +12,7 @@ pub struct JsSearchApi {
 
 fn data_api_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| {
-        Regex::new(r#"(?i)data-api=["']([^"']*search[^"']*)["']"#).unwrap()
-    })
+    RE.get_or_init(|| Regex::new(r#"(?i)data-api=["']([^"']*search[^"']*)["']"#).unwrap())
 }
 
 /// If homepage HTML embeds a JS search API path, return Legado JSON searchUrl stub.

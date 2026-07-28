@@ -32,9 +32,7 @@ pub use patch::{
     AdapterOutcome, MergePlan, MergeScore, NeedMoreHtml, NeedMoreHtmlKind, OptimizePlan, PatchOp,
     PatchPlan, Unrepairable, UnrepairableKind,
 };
-pub use pattern::{
-    Fingerprint, FingerprintRule, IdentifyResult, IdentifyRunnerUp, PatternCluster,
-};
+pub use pattern::{Fingerprint, FingerprintRule, IdentifyResult, IdentifyRunnerUp, PatternCluster};
 pub use port_types::{CheckOpts, FetchResult, HeaderMap};
 pub use report::ReportJson;
 pub use verify::VerifyResult;

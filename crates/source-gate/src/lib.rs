@@ -42,19 +42,18 @@ mod tests {
     use std::path::PathBuf;
 
     fn rules_path() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../config/verify_skip_rules.json")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/verify_skip_rules.json")
     }
 
     fn load_default() -> Vec<SkipRule> {
-        load_rules(&rules_path()).expect("load verify_skip_rules.json")
+        load_rules(rules_path()).expect("load verify_skip_rules.json")
     }
 
     #[test]
     fn qidian_skip_golden() {
         let rules = load_default();
         let r = classify_l0("https://www.qidian.com/book/123", &rules);
-        assert_eq!(r.verify, false);
+        assert!(!r.verify);
         assert_eq!(r.action, GateAction::Skip);
         assert_eq!(r.reason, "waf_official");
         let l0 = r.l0.expect("l0");
@@ -76,7 +75,7 @@ mod tests {
     fn video_and_hunt_actions() {
         let rules = load_default();
         let v = classify_l0("https://www.taopianzy.com/index.php", &rules);
-        assert_eq!(v.verify, false);
+        assert!(!v.verify);
         assert_eq!(v.action, GateAction::Video);
         assert_eq!(v.l0.as_ref().unwrap().rule_id, "taopian");
 

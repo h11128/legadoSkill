@@ -12,17 +12,15 @@ Device MCP is authoritative. Enforce `.cursor/rules/book-source-repair-disciplin
 
 **Agents must follow the Deep-fix checklist in order.** After each fix/skip, refine
 skill/scripts if a new trap appeared, then continue the goal loop.
-Track: `python scripts/repair_progress.py status --goal 100`.
+Track: `source-cli progress status`.
 
 | Doc | Path |
 |-----|------|
 | MCP defaults (SOT) | `E:/Projects/legadoSkill/config/mcp_defaults.json` |
-| MCP discover (auto) | `python scripts/mcp_discover.py` — also syncs `~/.cursor/mcp.json` |
-| Pipeline (layer) | `docs/repair-pipeline-design.md` |
-| Fix-agent prompt | `docs/FIX_AGENT_PROMPT.md` |
-| Platform (Rust) | `docs/repair-adapter-architecture.md` — **§12 functional green**; default `source-cli`; Python shims OK; §12.6 perf cutover pending |
+| MCP discover | `source-cli discover --write` |
+| Platform (Rust) | `docs/repair-adapter-architecture.md` — **full Rust cutover 2026-07-28** |
 
-**Entry preference:** Default to **`source-cli`** (`diagnose` → `repair --mode oneshot`). Script names (`repair_diagnose.py`, `repair_deep_loop.py`, …) are thin shims unless `REPAIR_USE_PYTHON=1`. Orchestration (`repair_wave`, harvest, parity) stays Python.
+**Entry:** **`source-cli` only** — no Python shims. Build: `(cd crates && cargo build -p source_cli)`.
 
 **Do not hard-code phone IPs in prompts or skill text.** Scripts call `ensure_session`,
 which rediscovers on connect failure and updates SOT. Agents must not ask the user to
@@ -33,9 +31,9 @@ which rediscovers on connect failure and updates SOT. Agents must not ask the us
 
 ```
 while fixed_n < 100:
-  A) repair_refresh_phone_index.py   # LIVE phone URLs (anti stale tagged_fails)
-  B) repair_rt_queue.py --limit 100  # respondTime asc, on_phone + 搜索* only, 1/host
-  C) repair_serial.py --limit 100    # L2 → require_patch → verify；每源 retro
+  A) source-cli queue refresh-index
+  B) source-cli queue rt --group 搜索失效
+  C) source-cli serial --urls-file … --limit 100
   D) new trap? → update skill+scripts BEFORE next batch
 ```
 
@@ -44,7 +42,7 @@ while fixed_n < 100:
 2. **No empty-probe verify** — `require_patch=True`；探针无补丁 → `no_patch_skip`（不烧设备校验）。
 3. **One host one candidate** in queue; scheme-less URLs normalized; `host_key` works without `http://`.
 4. migrate_to must pass L2; `search_endpoint_dead` → skip.
-5. After each URL: `repair_retro` + ledger；新 trap 立刻写 skill。
+5. After each URL: `source-cli retro append` + ledger；新 trap 立刻写 skill。
 
 **Anti-pattern (banned):** classify/probe 20–50 tagged fails to “find a good one”.
 That burned minutes and violated the 2–3 min budget. Pick → diagnose → patch → verify.
@@ -53,8 +51,8 @@ That burned minutes and violated the 2–3 min budget. Pick → diagnose → pat
 
 | Mode | When | Command / agent behavior |
 |------|------|---------------------------|
-| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | `source-cli diagnose` → `source-cli repair --mode oneshot --url URL`（shim: `repair_diagnose.py` / `repair_deep_loop.py --mode oneshot`）。必须走 layer；假详情不修 toc |
-| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `source-cli repair --mode batch --urls-file … --limit N`（shim: `repair_deep_loop.py --mode batch`）；勿整批 AwaitShell |
+| **oneshot** 修一个报一个 | 默认深修、用户要盯进度 | `source-cli diagnose` → `source-cli repair --mode oneshot --url URL`。必须走 layer；假详情不修 toc |
+| **batch** 批量 | 用户明确说「批量 / 做 N 个」 | `source-cli repair --mode batch --urls-file … --limit N`；勿整批 AwaitShell |
 
 ## Deep-fix checklist (one URL)
 
@@ -76,48 +74,15 @@ User standing preference (this repo): **every** oneshot (fixed / skip / fail) mu
 
 1. **Document** — append ledger; add a short entry to `docs/source-repair-retrospective.md`
    (or a dated `docs/source-repair-retro-*.md` when the note is long).
-2. **Reflect** — `python scripts/repair_retro.py append --url … --status … --trap … --harness …`
-   (`--script-fix` / `--skill-fix 1` when you actually change code/skill).
-3. **Improve（仅 novel trap / harness 缺口）** — **没有新知识点就不要改 skill 或 Rust。**
-   已有 trap 在 SKILL Traps 表 → `skill_fix=0` 即可。见 `docs/repair-closeout-gate.md`。
-
-### Close-out 决策（简化）
-
-```
-retro --trap 指向 SKILL 已有行？ 或 known:… ？
-├─ YES → skill_fix=0，不改 skill/Rust（除非 diagnose 仍系统性误导 → 可选改 harness）
-└─ NO（novel）→ SKILL 加一行 → skill_fix=1 → gate 通过后再 next
-     Rust/Python：仅当「下次 diagnose 还会走错」才改；纯 selector 补丁不必动
-```
+2. **Reflect** — `source-cli retro append --url … --status … --trap …`
+3. **Improve** — see `docs/repair-closeout-gate.md`
 
 ```bash
-# 有 --trap 时可选核对（novel + skill_fix=0 会失败）
-python scripts/repair_closeout_check.py gate --trap SLUG --skill-fix 0|1
-```
-
-**Why 3pxs / kptxt / utexs burned time (2026-07-26):**
-
-| URL | Real state | Waste | Now |
-|-----|------------|-------|-----|
-| 3pxs.xyz | why title=请输入密码 / urldance | full diagnose+rank | why title skip + L2 `wall:` |
-| kptxt | intermittent「连接数据库失败」 | multi retry+patch | L2/search body `wall:连接数据库失败` → skip |
-| utexs | parking `this domain` | phone debug + rank | `progress next` L2 gate before diagnose |
-
-**Oneshot rule:** 一次用户回合只深修 **一个** live 候选。`progress next` 可自动 skip 死站，但 agent 不得在未汇报的情况下连续开 3 次 diagnose。
-
-```bash
-cd E:/Projects/legadoSkill
-python scripts/repair_source.py channel
-# progress next (shim → source-cli progress):
-python scripts/repair_progress.py next
-# Build once:
-#   (cd crates && cargo build -p source_cli)
-crates/target/debug/source-cli.exe diagnose --url URL --key 我的
-crates/target/debug/source-cli.exe repair --mode oneshot --url URL
-# Do NOT pass --l0-only on progress/diagnose/repair for live fix (skips L2 dead/wall).
-# Or shim entrypoints (same flags):
-python scripts/repair_diagnose.py --url URL --key 我的
-python scripts/repair_deep_loop.py --mode oneshot --url URL
+source-cli closeout gate --trap SLUG --skill-fix false
+source-cli check channel
+source-cli progress next
+source-cli diagnose --url URL --key 我的
+source-cli repair --mode oneshot --url URL
 ```
 
 ## Traps
@@ -207,19 +172,13 @@ python scripts/repair_deep_loop.py --mode oneshot --url URL
 | Entry | Role |
 |--------|------|
 | **`source-cli diagnose`** | L2 fail-fast + debug layer / fake_detail |
-| **`source-cli repair`** | Live oneshot/batch: gate → diagnose → patch → save/verify |
-| **`source-cli repair-dry`** | Mem ports + adapters; no MCP writes（冒烟） |
-| **`source-cli gate`** / `source_gate_rs.py` | L0(/L1/L2) classify |
-| **`source-cli probe` / `migrate` / `hunt` / `progress` / `ledger`** | Probe forms, domain migrate/hunt, queue, session ledger |
-| `repair_*.py` shims | Same flags → `source-cli` (`REPAIR_USE_PYTHON=1` = legacy) |
-| `repair_wait.py` | Dynamic poll `finished/total`; page all results; harvest fail-fast timeout |
-| `repair_harvest.py` | Batch verify tagged fails (cheap wins) — orchestration |
-| `repair_serial.py` | respondTime 队列串行 + `require_patch` + retro |
-| `repair_refresh_phone_index.py` | MCP list_sources → phone index（存在性 SOT） |
-| `repair_rt_queue.py` | phone index + RT 排序；搜索标签；1 host 1 源 |
-| `repair_retro.py` | 每源反思 JSONL（trap / harness / script_fix） |
-| `repair_closeout.py` | 核心：gate / pending / SKILL sync |
-| `repair_closeout_check.py` | CLI：`gate` · `pending`（progress next 闸门）· `sync-skill` · `status` |
-| `repair_db.py` / `repair_db_cli.py` | SQLite §9：`source_snapshot` / ledger dual-write / cache meta；`status` / `import-ledger` |
-| `repair_wave.py` | triage（单源调 `source-cli repair`） |
-| `mcp_discover.py` / `parity_*` | MCP discover + parity harness（长期 Python） |
+| **`source-cli repair`** | Live oneshot/batch |
+| **`source-cli closeout`** | pending / gate / sync-skill / status |
+| **`source-cli retro`** | Per-source reflection + optional ledger seal |
+| **`source-cli progress` / `ledger`** | Queue next + session log |
+| **`source-cli discover`** | MCP LAN probe + write mcp_defaults.json |
+| **`source-cli check`** | channel / precheck / batch / full |
+| **`source-cli queue`** | refresh-index / rt queue |
+| **`source-cli wave` / `harvest` / `serial`** | Batch orchestration |
+| **`source-cli parse`** | Offline rule/url analysis |
+| **`source-cli parity`** | `cargo test --workspace` + inventory |

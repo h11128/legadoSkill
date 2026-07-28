@@ -75,9 +75,8 @@ impl McpClient {
             "params": params,
         });
 
-        let body = serde_json::to_string(&payload).map_err(|e| {
-            PortError::ContractViolation(format!("serialize rpc: {e}"))
-        })?;
+        let body = serde_json::to_string(&payload)
+            .map_err(|e| PortError::ContractViolation(format!("serialize rpc: {e}")))?;
 
         let mut req = ureq::post(&self.endpoint.mcp_url)
             .set("Content-Type", "application/json")
@@ -99,9 +98,9 @@ impl McpClient {
             }
         }
 
-        let body = resp.into_string().map_err(|e| {
-            PortError::Transient(format!("read body: {e}"))
-        })?;
+        let body = resp
+            .into_string()
+            .map_err(|e| PortError::Transient(format!("read body: {e}")))?;
         let body = unwrap_sse(&body);
         serde_json::from_str(&body).map_err(|e| {
             PortError::ContractViolation(format!("mcp json: {e}; body={}", trunc(&body, 200)))

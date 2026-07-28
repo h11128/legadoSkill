@@ -30,9 +30,8 @@ pub fn to_gate_url(raw: &str) -> Url {
         Ok(u) => u,
         Err(_) => {
             let padded = ensure_scheme(raw);
-            Url::new(padded.trim()).unwrap_or_else(|_| {
-                Url::new("http://invalid.invalid/").expect("fallback url")
-            })
+            Url::new(padded.trim())
+                .unwrap_or_else(|_| Url::new("http://invalid.invalid/").expect("fallback url"))
         }
     }
 }
@@ -76,7 +75,10 @@ mod tests {
             host_of("https://WWW.Example.com:8443/p").as_deref(),
             Some("www.example.com")
         );
-        assert_eq!(host_of("bare.example/path").as_deref(), Some("bare.example"));
+        assert_eq!(
+            host_of("bare.example/path").as_deref(),
+            Some("bare.example")
+        );
     }
 
     #[test]

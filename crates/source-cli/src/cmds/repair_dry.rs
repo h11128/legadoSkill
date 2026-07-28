@@ -8,9 +8,7 @@ use serde_json::json;
 use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
 use source_gate::{classify_one_l0, load_rules};
 use source_spine::fakes::{FixedClock, IdleChannel, MemLedger, MemRepo, MemVerify};
-use source_spine::{
-    run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts,
-};
+use source_spine::{run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts};
 use source_types::{BookSource, SourceKey, Url};
 
 #[cfg(feature = "gate_full")]

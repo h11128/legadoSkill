@@ -30,11 +30,14 @@ mod fixture_tests {
     use super::*;
 
     fn fixtures_root() -> PathBuf {
-        repo_root().expect("repo root").join("fixtures/expected/contracts")
+        repo_root()
+            .expect("repo root")
+            .join("fixtures/expected/contracts")
     }
 
     fn load_json(path: &PathBuf) -> Value {
-        let raw = fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let raw =
+            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
         serde_json::from_str(&raw).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
     }
 

@@ -45,10 +45,7 @@ impl AdapterRegistry {
 
     fn insert(&mut self, id: &str, rules: Vec<FingerprintRule>) {
         let family = SiteFamily::new(id);
-        self.entries.insert(
-            id.to_string(),
-            Entry { family, rules },
-        );
+        self.entries.insert(id.to_string(), Entry { family, rules });
     }
 
     pub fn families(&self) -> Vec<SiteFamily> {

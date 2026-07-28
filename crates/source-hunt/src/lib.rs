@@ -171,10 +171,8 @@ mod tests {
 
     #[test]
     fn temp_seeds_json_and_keyword() {
-        let dir = std::env::temp_dir().join(format!(
-            "source_hunt_seeds_{}.json",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("source_hunt_seeds_{}.json", std::process::id()));
         {
             let mut f = std::fs::File::create(&dir).unwrap();
             write!(

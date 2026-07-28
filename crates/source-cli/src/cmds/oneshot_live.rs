@@ -14,9 +14,7 @@ use source_mcp::{
     DualLedgerPort, FsChannelPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort,
 };
 use source_ports::{ChannelPort, Clock, DiagnosePort, HtmlFetchPort, SourceRepository};
-use source_spine::{
-    run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts,
-};
+use source_spine::{run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts};
 use source_types::{FetchResult, HeaderMap, Layer, PortError, SourceKey, Url};
 
 use super::search_plan::{build_search_layer_plan, SearchPlanOutcome};
@@ -158,10 +156,7 @@ pub fn repair_one_url(
     let debug_text = if skip_diagnose {
         String::new()
     } else {
-        match client.tools_call(
-            "debug_source",
-            serde_json::json!({"url": url, "key": key}),
-        ) {
+        match client.tools_call("debug_source", serde_json::json!({"url": url, "key": key})) {
             Ok(v) => McpClient::extract_text(&v),
             Err(e) => {
                 eprintln!("repair: debug_source warn: {e}");

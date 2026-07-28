@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-07-28",
+  "git_sha": "846f5f3",
+  "machine_note": "Windows dev host; MCP phone LAN; baseline captured pre full Rust cutover",
+  "scenarios": {
+    "l2_wall_skip_p95_s": null,
+    "oneshot_deep_p95_s": null,
+    "batch_first_report_p95_s": null,
+    "gate_only_cpu_ratio": 1.0,
+    "mcp_poll_count_delta": 0
+  },
+  "url_set": [],
+  "note": "Populate via source-cli parity perf --write-baseline after cutover infra lands"
+}

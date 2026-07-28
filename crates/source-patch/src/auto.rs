@@ -23,7 +23,11 @@ fn author_p_re() -> &'static Regex {
 }
 
 fn ensure_info(root: &mut Value) -> &mut serde_json::Map<String, Value> {
-    if !root.get("ruleBookInfo").map(|v| v.is_object()).unwrap_or(false) {
+    if !root
+        .get("ruleBookInfo")
+        .map(|v| v.is_object())
+        .unwrap_or(false)
+    {
         root["ruleBookInfo"] = json!({});
     }
     root.get_mut("ruleBookInfo")
@@ -130,10 +134,7 @@ mod tests {
         let ch = apply_auto_patches(&mut src);
         assert!(ch.iter().any(|c| c.contains("clear ruleBookInfo.tocUrl")));
         assert!(ch.iter().any(|c| c.contains("concurrentRate")));
-        assert_eq!(
-            src.as_value()["ruleBookInfo"]["tocUrl"].as_str(),
-            Some("")
-        );
+        assert_eq!(src.as_value()["ruleBookInfo"]["tocUrl"].as_str(), Some(""));
         assert_eq!(src.as_value()["concurrentRate"], "1000");
     }
 }

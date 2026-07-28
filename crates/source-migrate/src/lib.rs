@@ -134,12 +134,7 @@ mod tests {
             "bookSourceUrl": "http://www.old.com##cmt",
             "searchUrl": "http://www.old.com/search?q={{key}}"
         }));
-        let m = migrate_book_source(
-            &src,
-            "http://www.old.com##cmt",
-            "https://new.com/",
-        )
-        .unwrap();
+        let m = migrate_book_source(&src, "http://www.old.com##cmt", "https://new.com/").unwrap();
         assert_eq!(m.as_value()["bookSourceUrl"], "https://new.com##cmt");
         assert!(m
             .search_url()

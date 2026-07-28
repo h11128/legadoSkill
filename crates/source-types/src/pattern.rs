@@ -81,12 +81,7 @@ pub struct IdentifyResult {
 }
 
 impl IdentifyResult {
-    pub fn new(
-        url: Url,
-        family: SiteFamily,
-        fingerprint: Fingerprint,
-        score: f64,
-    ) -> Self {
+    pub fn new(url: Url, family: SiteFamily, fingerprint: Fingerprint, score: f64) -> Self {
         Self {
             schema_version: SCHEMA_VERSION.to_string(),
             url,

@@ -11,11 +11,11 @@ use crate::apply_ops::{apply_ops_to_source, ops_summary};
 use crate::apply_report::{
     dry_run_outcome, fail_report, report_validate_failure, short_circuit_fixed,
 };
-use source_types::RepairContext;
 use crate::error::SpineError;
 use crate::idempotency::idempotency_key;
 use crate::outcome::{ApplyOutcome, IdempotencyStore};
 use crate::report_emit::emit_report_json;
+use source_types::RepairContext;
 
 /// Apply a validated patch plan through ports only (DIP).
 pub struct ApplyService;
@@ -57,10 +57,25 @@ impl ApplyService {
 
         if let Err(e) = repo.save(&after) {
             let mut out = fail_report(
-                ctx, plan, &id_key, before, None, false, None, false,
-                format!("save failed: {e}"), e.kind().exit_code(),
+                ctx,
+                plan,
+                &id_key,
+                before,
+                None,
+                false,
+                None,
+                false,
+                format!("save failed: {e}"),
+                e.kind().exit_code(),
             )?;
-            if let Err(le) = ledger_note(ledger, clock, ctx, LedgerStep::Apply, &out.report.message, None) {
+            if let Err(le) = ledger_note(
+                ledger,
+                clock,
+                ctx,
+                LedgerStep::Apply,
+                &out.report.message,
+                None,
+            ) {
                 out.report.message = format!("{}; ledger: {le}", out.report.message);
                 out.report_line = emit_report_json(&out.report)?;
             }
@@ -69,32 +84,55 @@ impl ApplyService {
 
         if ctx.no_verify {
             let mut out = fail_report(
-                ctx, plan, &id_key, before, Some(after), true, None, false,
+                ctx,
+                plan,
+                &id_key,
+                before,
+                Some(after),
+                true,
+                None,
+                false,
                 "saved without verify (no_verify); not claiming fixed",
                 ErrorKind::ContractViolation.exit_code(),
             )?;
-            if let Err(le) = ledger_note(ledger, clock, ctx, LedgerStep::Apply, &out.report.message, None) {
+            if let Err(le) = ledger_note(
+                ledger,
+                clock,
+                ctx,
+                LedgerStep::Apply,
+                &out.report.message,
+                None,
+            ) {
                 out.report.message = format!("{}; ledger: {le}", out.report.message);
                 out.report_line = emit_report_json(&out.report)?;
             }
             return Ok(out);
         }
 
-        let vr = match verify.check(
-            &ctx.source_key,
-            CheckOpts::new(ctx.config.check_discovery),
-        ) {
+        let vr = match verify.check(&ctx.source_key, CheckOpts::new(ctx.config.check_discovery)) {
             Ok(vr) => vr,
             Err(e) => {
                 if ctx.rollback_on_verify_fail {
                     let _ = repo.save(&before);
                 }
                 let mut out = fail_report(
-                    ctx, plan, &id_key, before, Some(after), true, None, true,
-                    format!("verify error: {e}"), e.kind().exit_code(),
+                    ctx,
+                    plan,
+                    &id_key,
+                    before,
+                    Some(after),
+                    true,
+                    None,
+                    true,
+                    format!("verify error: {e}"),
+                    e.kind().exit_code(),
                 )?;
                 if let Err(le) = ledger_note(
-                    ledger, clock, ctx, LedgerStep::Check, &out.report.message,
+                    ledger,
+                    clock,
+                    ctx,
+                    LedgerStep::Check,
+                    &out.report.message,
                     Some("verify_failed_after_save"),
                 ) {
                     out.report.message = format!("{}; ledger: {le}", out.report.message);
@@ -110,11 +148,23 @@ impl ApplyService {
             }
             let msg = vr.message.clone();
             let mut out = fail_report(
-                ctx, plan, &id_key, before, Some(after), true, Some(vr), true,
-                msg, ErrorKind::Permanent.exit_code(),
+                ctx,
+                plan,
+                &id_key,
+                before,
+                Some(after),
+                true,
+                Some(vr),
+                true,
+                msg,
+                ErrorKind::Permanent.exit_code(),
             )?;
             if let Err(le) = ledger_note(
-                ledger, clock, ctx, LedgerStep::Check, "verify_failed_after_save",
+                ledger,
+                clock,
+                ctx,
+                LedgerStep::Check,
+                "verify_failed_after_save",
                 Some("verify_failed_after_save"),
             ) {
                 out.report.message = format!("{}; ledger: {le}", out.report.message);
@@ -126,7 +176,14 @@ impl ApplyService {
         if let Some(store) = idem {
             store.remember_ok(&id_key);
         }
-        ledger_note(ledger, clock, ctx, LedgerStep::Check, LEDGER_VERIFY_OK, None)?;
+        ledger_note(
+            ledger,
+            clock,
+            ctx,
+            LedgerStep::Check,
+            LEDGER_VERIFY_OK,
+            None,
+        )?;
 
         let mut report = ReportJson::new(
             ctx.capability,
@@ -158,8 +215,7 @@ impl ApplyService {
         if plan.ops.is_empty() {
             return Err(SpineError::Contract("patch_plan ops empty".into()));
         }
-        let value = serde_json::to_value(plan)
-            .map_err(|e| SpineError::Internal(e.to_string()))?;
+        let value = serde_json::to_value(plan).map_err(|e| SpineError::Internal(e.to_string()))?;
         validate_patch(&value)?;
         Ok(())
     }
