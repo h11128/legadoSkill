@@ -1,8 +1,7 @@
 //! Clap CLI definition (kept out of main.rs for the 300-line limit).
 
-use crate::cli_subs::{
-    CheckSub, CloseoutSub, LedgerSub, ParseSub, ProgressSub, QueueSub, RetroSub,
-};
+use crate::cli_subs::{ClaimSub, CloseoutSub, LedgerSub, ParseSub, PatternSub, ProgressSub, RetroSub, SourceSub};
+use crate::ops_subs::{CacheSub, CheckSub, DbSub, KnowledgeSub, QueueSub};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -90,6 +89,18 @@ pub enum Cmd {
         l2_timeout: f64,
         #[arg(long)]
         debug_file: Option<PathBuf>,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    Fetch {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        page: Option<String>,
+        #[arg(long, default_value = "temp/full_fix/cache/html")]
+        dump_dir: PathBuf,
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     Probe {
         #[arg(long)]
@@ -100,6 +111,8 @@ pub enum Cmd {
         html_file: Option<PathBuf>,
         #[arg(long, default_value = "我的")]
         key: String,
+        #[arg(long, default_value_t = false)]
+        js_engine: bool,
     },
     Migrate {
         #[arg(long = "from-url")]
@@ -110,12 +123,26 @@ pub enum Cmd {
         dry_run: bool,
         #[arg(long, default_value_t = false)]
         keep_old: bool,
+        #[arg(long, default_value_t = false)]
+        verify: bool,
+        #[arg(long, default_value_t = false)]
+        enable: bool,
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     Hunt {
         #[arg(long)]
         url: String,
         #[arg(long)]
         seeds: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        probe: bool,
+        #[arg(long, default_value_t = 5.0)]
+        l2_timeout: f64,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     Progress {
         #[command(subcommand)]
@@ -160,6 +187,8 @@ pub enum Cmd {
         timeout: f64,
         #[arg(long)]
         config: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        sync_cursor: bool,
     },
     Check {
         #[command(subcommand)]
@@ -168,6 +197,22 @@ pub enum Cmd {
     Queue {
         #[command(subcommand)]
         cmd: QueueSub,
+    },
+    Pattern {
+        #[command(subcommand)]
+        cmd: PatternSub,
+    },
+    Db {
+        #[command(subcommand)]
+        cmd: DbSub,
+    },
+    Cache {
+        #[command(subcommand)]
+        cmd: CacheSub,
+    },
+    Knowledge {
+        #[command(subcommand)]
+        cmd: KnowledgeSub,
     },
     Parse {
         #[command(subcommand)]
@@ -180,20 +225,139 @@ pub enum Cmd {
     Wave {
         #[arg(long)]
         urls_file: PathBuf,
-        #[arg(long, default_value_t = 15)]
-        limit: usize,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 8)]
+        thread_count: u32,
+        #[arg(long, default_value_t = 4)]
+        patch_workers: usize,
+        #[arg(long, default_value_t = 45_000)]
+        timeout_ms: u64,
+        #[arg(long, default_value_t = false)]
+        check_discovery: bool,
+        #[arg(long, default_value_t = false)]
+        disable_dropped: bool,
+        #[arg(long, default_value = "temp/full_fix/wave_report.json")]
+        out: PathBuf,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = 4.0)]
+        l2_timeout: f64,
     },
     Harvest {
         #[arg(long)]
-        urls_file: PathBuf,
-        #[arg(long, default_value_t = 50)]
+        fails: Option<PathBuf>,
+        #[arg(long, default_value_t = 16)]
         limit: usize,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 6)]
+        thread_count: u32,
+        #[arg(long, default_value_t = 18_000)]
+        timeout_ms: u64,
+        #[arg(long, default_value = "temp/full_fix/harvest_last.json")]
+        out: PathBuf,
     },
     Serial {
         #[arg(long)]
         urls_file: PathBuf,
         #[arg(long, default_value_t = 100)]
         limit: usize,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = false)]
+        l0_only: bool,
+        #[arg(long, default_value_t = 1.5)]
+        tcp_timeout: f64,
+        #[arg(long, default_value_t = 4.0)]
+        l2_timeout: f64,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        rebuild_queue: bool,
+        #[arg(long, default_value_t = true)]
+        #[arg(long = "no-auto-retro", action = clap::ArgAction::SetFalse)]
+        auto_retro: bool,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    Bench {
+        #[arg(long)]
+        urls_file: Option<PathBuf>,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 8)]
+        thread_count: u32,
+        #[arg(long, default_value_t = 4)]
+        patch_workers: usize,
+        #[arg(long, default_value_t = 45_000)]
+        timeout_ms: u64,
+        #[arg(long, default_value_t = false)]
+        disable_dropped: bool,
+        #[arg(long, default_value = "temp/full_fix/bench10_last.json")]
+        out: PathBuf,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = 4.0)]
+        l2_timeout: f64,
+    },
+    DeepWave {
+        #[arg(long)]
+        urls_file: PathBuf,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 45.0)]
+        budget_s: f64,
+        #[arg(long, default_value = "temp/full_fix/deep_wave_last.json")]
+        out: PathBuf,
+    },
+    SearchWave {
+        #[arg(long)]
+        urls_file: PathBuf,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 4)]
+        workers: usize,
+        #[arg(long, default_value_t = 8)]
+        thread_count: u32,
+        #[arg(long, default_value_t = 45_000)]
+        timeout_ms: u64,
+        #[arg(long, default_value = "temp/full_fix/search_wave_last.json")]
+        out: PathBuf,
+    },
+    Goal15 {
+        #[arg(long)]
+        urls_file: Option<PathBuf>,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        l0_only: bool,
+        #[arg(long, default_value_t = 1.5)]
+        tcp_timeout: f64,
+        #[arg(long, default_value_t = 4.0)]
+        l2_timeout: f64,
+        #[arg(long, default_value = "temp/full_fix/goal15_results.json")]
+        out: PathBuf,
+    },
+    Source {
+        #[command(subcommand)]
+        cmd: SourceSub,
+    },
+    Claim {
+        #[command(subcommand)]
+        cmd: ClaimSub,
+    },
+    DebugVsCheck {
+        #[arg(long)]
+        url: String,
+        #[arg(long, default_value = "我的")]
+        key: String,
+        #[arg(long, default_value = "temp/full_fix/debug_vs_check.json")]
+        out: PathBuf,
+        #[arg(long, default_value_t = false)]
+        no_ledger: bool,
     },
     Version,
 }

@@ -12,6 +12,7 @@ pub enum LedgerCmd {
         step: String,
         result: String,
         note: Option<String>,
+        waste: Option<String>,
     },
     Show {
         limit: usize,
@@ -32,6 +33,7 @@ pub fn run_ledger(cmd: LedgerCmd) -> ExitCode {
             step,
             result,
             note,
+            waste,
         } => {
             let u = match Url::new(url.trim()) {
                 Ok(u) => u,
@@ -53,6 +55,7 @@ pub fn run_ledger(cmd: LedgerCmd) -> ExitCode {
             let ts = chrono::Utc::now().to_rfc3339();
             let mut row = LedgerRow::new(ts, u, step, result);
             row.note = note;
+            row.waste = waste;
             if let Err(e) = port.append(&row) {
                 eprintln!("ledger: append: {e}");
                 return ExitCode::from(2);

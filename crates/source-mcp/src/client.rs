@@ -1,18 +1,20 @@
 //! Streamable-HTTP MCP JSON-RPC client (matches `scripts/mcp_client.py`).
 
 use std::sync::Mutex;
+use std::sync::RwLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Value};
 use source_types::PortError;
 
+use crate::discover::ensure_reachable;
 use crate::endpoint::McpEndpoint;
 
 const PROTOCOL_VERSION: &str = "2024-11-05";
 
 /// Minimal MCP HTTP client with session header + SSE `data:` unwrap.
 pub struct McpClient {
-    endpoint: McpEndpoint,
+    endpoint: RwLock<McpEndpoint>,
     session: Mutex<Option<String>>,
     timeout: Duration,
     client_name: String,
@@ -21,7 +23,7 @@ pub struct McpClient {
 impl McpClient {
     pub fn new(endpoint: McpEndpoint) -> Self {
         Self {
-            endpoint,
+            endpoint: RwLock::new(endpoint),
             session: Mutex::new(None),
             timeout: Duration::from_secs(120),
             client_name: "source_mcp".into(),
@@ -38,8 +40,16 @@ impl McpClient {
         self
     }
 
-    pub fn endpoint(&self) -> &McpEndpoint {
-        &self.endpoint
+    pub fn endpoint(&self) -> McpEndpoint {
+        self.endpoint
+            .read()
+            .expect("endpoint lock")
+            .clone()
+    }
+
+    fn endpoint_url_token(&self) -> (String, String) {
+        let ep = self.endpoint.read().expect("endpoint lock");
+        (ep.mcp_url.clone(), ep.token.clone())
     }
 
     pub fn reset_session(&self) {
@@ -51,16 +61,37 @@ impl McpClient {
     /// `initialize` + best-effort `notifications/initialized`.
     pub fn ensure_session(&self) -> Result<(), PortError> {
         self.reset_session();
-        self.call(
+        match self.call(
             "initialize",
             json!({
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
                 "clientInfo": {"name": self.client_name, "version": "1.0"},
             }),
-        )?;
-        let _ = self.call("notifications/initialized", json!({}));
-        Ok(())
+        ) {
+            Ok(_) => {
+                let _ = self.call("notifications/initialized", json!({}));
+                Ok(())
+            }
+            Err(e) if is_transport(&e) => {
+                self.reset_session();
+                let ep = ensure_reachable(None, 3.0)?;
+                if let Ok(mut w) = self.endpoint.write() {
+                    *w = ep;
+                }
+                self.call(
+                    "initialize",
+                    json!({
+                        "protocolVersion": PROTOCOL_VERSION,
+                        "capabilities": {},
+                        "clientInfo": {"name": self.client_name, "version": "1.0"},
+                    }),
+                )?;
+                let _ = self.call("notifications/initialized", json!({}));
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub fn call(&self, method: &str, params: Value) -> Result<Value, PortError> {
@@ -78,10 +109,12 @@ impl McpClient {
         let body = serde_json::to_string(&payload)
             .map_err(|e| PortError::ContractViolation(format!("serialize rpc: {e}")))?;
 
-        let mut req = ureq::post(&self.endpoint.mcp_url)
+        let (mcp_url, token) = self.endpoint_url_token();
+
+        let mut req = ureq::post(&mcp_url)
             .set("Content-Type", "application/json")
             .set("Accept", "application/json, text/event-stream")
-            .set("X-Legado-Token", &self.endpoint.token)
+            .set("X-Legado-Token", &token)
             .timeout(self.timeout);
 
         if let Ok(g) = self.session.lock() {
@@ -157,6 +190,10 @@ fn unwrap_sse(body: &str) -> String {
         .last()
         .map(|s| (*s).to_string())
         .unwrap_or_else(|| body.to_string())
+}
+
+fn is_transport(err: &PortError) -> bool {
+    matches!(err, PortError::Transient(_))
 }
 
 fn map_transport(err: ureq::Error) -> PortError {

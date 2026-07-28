@@ -17,7 +17,10 @@ mod verify;
 pub use batch_verify::{batch_check_urls, batch_max_wait_s};
 pub use channel::{status as channel_status_raw, FsChannelGuard, FsChannelPort};
 pub use client::McpClient;
-pub use discover::{discover, probe_mcp, write_defaults as write_discover_defaults};
+pub use discover::{
+    apply_discovery, discover, ensure_reachable, probe_mcp, sync_cursor_mcp_json,
+    write_defaults as write_discover_defaults,
+};
 pub use endpoint::McpEndpoint;
 pub use fakes::{
     MemChannelGuard, MemChannelPort, MemClock, MemLedgerPort, MemSourceRepository, MemVerifyPort,
@@ -27,7 +30,7 @@ pub use ledger::{
 };
 pub use root::repo_root;
 pub use source_repo::{url_candidates, McpSourceRepository};
-pub use verify::McpVerifyPort;
+pub use verify::{is_repair_success, McpVerifyPort};
 pub fn channel_status() -> Result<serde_json::Value, source_types::PortError> {
     let root = repo_root()?;
     channel::status(&root)

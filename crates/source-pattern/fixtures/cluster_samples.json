@@ -1,0 +1,38 @@
+[
+  {
+    "bookSourceUrl": "https://a1.example/",
+    "searchUrl": "https://a1.example/search.php?q={{key}}",
+    "ruleSearch": { "bookList": ".item" },
+    "ruleToc": { "chapterList": ".ch", "tocUrl": "" },
+    "ruleContent": { "content": "#c" },
+    "bookSourceType": 0,
+    "verify_ok": true
+  },
+  {
+    "bookSourceUrl": "https://a2.example/",
+    "searchUrl": "https://a2.example/search.php?q={{key}}",
+    "ruleSearch": { "bookList": ".item" },
+    "ruleToc": { "chapterList": ".ch", "tocUrl": "" },
+    "ruleContent": { "content": "#c" },
+    "bookSourceType": 0,
+    "verify_ok": true
+  },
+  {
+    "bookSourceUrl": "https://a3.example/",
+    "searchUrl": "https://a3.example/search.php?q={{key}}",
+    "ruleSearch": { "bookList": ".item" },
+    "ruleToc": { "chapterList": ".ch", "tocUrl": "" },
+    "ruleContent": { "content": "#c" },
+    "bookSourceType": 0,
+    "verify_ok": true
+  },
+  {
+    "bookSourceUrl": "https://b1.example/",
+    "searchUrl": "https://b1.example/s?q={{key}}",
+    "ruleSearch": { "bookList": ".other" },
+    "ruleToc": { "chapterList": ".x" },
+    "ruleContent": { "content": "#y" },
+    "bookSourceType": 0,
+    "verify_ok": true
+  }
+]

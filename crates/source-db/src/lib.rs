@@ -1,16 +1,34 @@
 //! SQLite persistence (§9): WAL, foreign_keys, migrate + ledger/host/verify APIs.
+//! Feature parity for `repair_db*.py` (library surface; CLI wiring is separate).
 
+mod cfg;
 mod error;
 mod host_stats;
+mod html_meta;
+mod import;
+mod keys;
 mod ledger;
+mod pattern_store;
+mod phone;
 mod schema;
 mod source_snapshot;
 mod verify;
 
+pub use cfg::{
+    cfg_from_value, db_path, load_cfg, RepairDbCfg, DEFAULT_PHONE_TTL_S, DEFAULT_SNAPSHOT_TTL_S,
+};
 pub use error::DbError;
 pub use host_stats::HostStatsRow;
+pub use html_meta::{html_meta_count, import_html_cache_dir, upsert_html_meta, HtmlMetaRow};
+pub use import::{import_host_stats_file, import_jsonl_ledger, ledger_event_count};
+pub use keys::{host_key, iso_now, norm_source_key};
+pub use pattern_store::{
+    count_clusters, fixed_source_keys, get_payload, list_payloads, upsert_cluster,
+};
+pub use phone::{bulk_upsert_list_items, export_phone_index_json, phone_index_fresh, status_json};
 pub use source_snapshot::{
-    count as snapshot_count, get as get_snapshot, upsert as upsert_snapshot, SourceSnapshotRow,
+    count as snapshot_count, get as get_snapshot, get_fresh_payload, upsert as upsert_snapshot,
+    SourceSnapshotRow,
 };
 
 use rusqlite::Connection;
@@ -28,6 +46,9 @@ pub struct Db {
 impl Db {
     /// Open or create SQLite at `path`, apply WAL + foreign_keys, migrate schema.
     pub fn connect(path: impl AsRef<Path>) -> Result<Self> {
+        if let Some(parent) = path.as_ref().parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let conn = Connection::open(path.as_ref())?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
@@ -35,6 +56,14 @@ impl Db {
         let db = Self { conn };
         db.migrate_schema()?;
         Ok(db)
+    }
+
+    /// Connect using repo root + `repair_db_defaults.json`.
+    pub fn connect_defaults(root: impl AsRef<Path>) -> Result<(Self, RepairDbCfg)> {
+        let root = root.as_ref();
+        let cfg = load_cfg(root);
+        let path = db_path(root, &cfg);
+        Ok((Self::connect(&path)?, cfg))
     }
 
     /// Idempotent CREATE IF NOT EXISTS for §9.3 tables + schema_meta version.
@@ -54,8 +83,7 @@ impl Db {
         verify::record(&self.conn, result)
     }
 
-    #[allow(dead_code)]
-    fn upsert_source_snapshot(&self, row: &SourceSnapshotRow) -> Result<()> {
+    pub fn upsert_source_snapshot(&self, row: &SourceSnapshotRow) -> Result<()> {
         source_snapshot::upsert(&self.conn, row)
     }
 
@@ -63,8 +91,86 @@ impl Db {
         source_snapshot::get(&self.conn, source_key)
     }
 
+    /// TTL-aware payload (Python `get_source_snapshot`).
+    pub fn get_source_payload_fresh(
+        &self,
+        source_key: &str,
+        max_age_s: f64,
+    ) -> Result<Option<serde_json::Value>> {
+        source_snapshot::get_fresh_payload(&self.conn, source_key, max_age_s)
+    }
+
     pub fn source_snapshot_count(&self) -> Result<i64> {
         source_snapshot::count(&self.conn)
+    }
+
+    pub fn list_snapshot_payloads(
+        &self,
+        enabled_only: bool,
+    ) -> Result<Vec<(String, serde_json::Value)>> {
+        pattern_store::list_payloads(&self.conn, enabled_only)
+    }
+
+    pub fn fixed_source_keys(&self) -> Result<Vec<String>> {
+        pattern_store::fixed_source_keys(&self.conn)
+    }
+
+    pub fn upsert_pattern_cluster(&self, cluster: &source_types::PatternCluster) -> Result<()> {
+        pattern_store::upsert_cluster(&self.conn, cluster)
+    }
+
+    pub fn pattern_cluster_count(&self) -> Result<i64> {
+        pattern_store::count_clusters(&self.conn)
+    }
+
+    pub fn get_snapshot_payload(&self, source_key: &str) -> Result<Option<serde_json::Value>> {
+        pattern_store::get_payload(&self.conn, source_key)
+    }
+
+    pub fn upsert_html_meta_row(&self, row: &HtmlMetaRow) -> Result<()> {
+        html_meta::upsert_html_meta(&self.conn, row)
+    }
+
+    pub fn import_jsonl_ledger(&self, path: impl AsRef<Path>) -> Result<usize> {
+        import::import_jsonl_ledger(&self.conn, path.as_ref())
+    }
+
+    pub fn import_html_cache_dir(&self, html_dir: impl AsRef<Path>) -> Result<usize> {
+        html_meta::import_html_cache_dir(&self.conn, html_dir.as_ref())
+    }
+
+    pub fn import_host_stats_file(&self, path: impl AsRef<Path>) -> Result<usize> {
+        import::import_host_stats_file(&self.conn, path.as_ref())
+    }
+
+    pub fn import_cache(
+        &self,
+        html_dir: impl AsRef<Path>,
+        host_stats: impl AsRef<Path>,
+    ) -> Result<(usize, usize)> {
+        let html_n = self.import_html_cache_dir(html_dir)?;
+        let host_n = self.import_host_stats_file(host_stats)?;
+        Ok((html_n, host_n))
+    }
+
+    pub fn bulk_upsert_list_items(&self, items: &[serde_json::Value]) -> Result<usize> {
+        phone::bulk_upsert_list_items(&self.conn, items)
+    }
+
+    pub fn phone_index_fresh(&self, ttl_s: f64) -> Result<bool> {
+        phone::phone_index_fresh(&self.conn, ttl_s)
+    }
+
+    pub fn export_phone_index_json(&self, out: impl AsRef<Path>) -> Result<serde_json::Value> {
+        phone::export_phone_index_json(&self.conn, out.as_ref())
+    }
+
+    pub fn status_json(
+        &self,
+        db_path: impl AsRef<Path>,
+        phone_ttl_s: f64,
+    ) -> Result<serde_json::Value> {
+        phone::status_json(&self.conn, db_path.as_ref(), phone_ttl_s)
     }
 
     /// Borrow the underlying connection (tests / advanced callers).
@@ -74,144 +180,5 @@ impl Db {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use source_types::{LedgerStep, Mode, Url};
-    use tempfile::TempDir;
-
-    fn open_tmp() -> (TempDir, Db) {
-        let dir = TempDir::new().expect("tempdir");
-        let path = dir.path().join("repair_state.sqlite");
-        let db = Db::connect(&path).expect("connect");
-        (dir, db)
-    }
-
-    #[test]
-    fn migrate_is_idempotent() {
-        let (_dir, db) = open_tmp();
-        db.migrate_schema().expect("migrate again");
-        let n: i64 = db
-            .connection()
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN (
-                   'source_snapshot','ledger_events','gate_runs','verify_runs',
-                   'host_stats','html_cache_meta','pattern_cluster','claims','schema_meta'
-                 )",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(n, 9);
-        let ver: String = db
-            .connection()
-            .query_row(
-                "SELECT value FROM schema_meta WHERE key='version'",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(ver, "1");
-    }
-
-    #[test]
-    fn append_ledger_roundtrip() {
-        let (_dir, db) = open_tmp();
-        let url = Url::new("https://a.example/").unwrap();
-        let row = LedgerRow::new("2026-07-27T00:00:00Z", url, LedgerStep::Gate, "skip");
-        let id = db.append_ledger(&row).unwrap();
-        assert!(id > 0);
-        let (sk, step): (String, String) = db
-            .connection()
-            .query_row(
-                "SELECT source_key, step FROM ledger_events WHERE id=?1",
-                [id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
-            .unwrap();
-        assert_eq!(sk, "https://a.example/");
-        assert_eq!(step, "gate");
-    }
-
-    #[test]
-    fn upsert_host_stats_and_verify() {
-        let (_dir, db) = open_tmp();
-        let host = HostStatsRow {
-            host_key: "a.example".into(),
-            ewma_gap_s: 4.5,
-            hits: 2,
-            ok: 1,
-            fail: 1,
-            rate_limits: 0,
-            last_rate_limit_at: None,
-            last_duration_ms: Some(120),
-            last_at: Some(1.0),
-            extra_json: None,
-        };
-        db.upsert_host_stats(&host).unwrap();
-        db.upsert_host_stats(&HostStatsRow {
-            hits: 3,
-            ..host.clone()
-        })
-        .unwrap();
-        let hits: i64 = db
-            .connection()
-            .query_row(
-                "SELECT hits FROM host_stats WHERE host_key='a.example'",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(hits, 3);
-
-        let url = Url::new("https://a.example/").unwrap();
-        let mut vr = VerifyResult::new(url, true, "ok", Mode::Oneshot);
-        vr.duration_ms = Some(200);
-        let id = db.record_verify(&vr).unwrap();
-        assert!(id > 0);
-        let success: i64 = db
-            .connection()
-            .query_row("SELECT success FROM verify_runs WHERE id=?1", [id], |r| {
-                r.get(0)
-            })
-            .unwrap();
-        assert_eq!(success, 1);
-    }
-
-    #[test]
-    fn wal_and_foreign_keys_on() {
-        let (_dir, db) = open_tmp();
-        let mode: String = db
-            .connection()
-            .query_row("PRAGMA journal_mode", [], |r| r.get(0))
-            .unwrap();
-        assert_eq!(mode.to_ascii_lowercase(), "wal");
-        let fk: i64 = db
-            .connection()
-            .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
-            .unwrap();
-        assert_eq!(fk, 1);
-    }
-
-    #[test]
-    fn source_snapshot_roundtrip() {
-        let (_dir, db) = open_tmp();
-        let row = SourceSnapshotRow {
-            source_key: "https://a.example/".into(),
-            host_key: "a.example".into(),
-            name: Some("Demo".into()),
-            book_source_type: 0,
-            enabled: true,
-            group_name: Some("未整理".into()),
-            respond_time_ms: Some(1200),
-            payload_json: r#"{"bookSourceUrl":"https://a.example/"}"#.into(),
-            pulled_at: "2026-07-27T00:00:00Z".into(),
-        };
-        db.upsert_source_snapshot(&row).unwrap();
-        assert_eq!(db.source_snapshot_count().unwrap(), 1);
-        let got = db
-            .get_source_snapshot("https://a.example/")
-            .unwrap()
-            .unwrap();
-        assert_eq!(got.name.as_deref(), Some("Demo"));
-    }
-}
+#[path = "db_tests.rs"]
+mod tests;

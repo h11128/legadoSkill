@@ -1,8 +1,12 @@
 //! BookSource snapshots pulled from device MCP (avoid repeated get_source / list_sources).
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
+use crate::keys::parse_iso_ts;
 use crate::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +74,28 @@ pub fn get(conn: &Connection, source_key: &str) -> Result<Option<SourceSnapshotR
     )
     .optional()
     .map_err(Into::into)
+}
+
+/// Return payload JSON if row exists and `pulled_at` within `max_age_s`.
+pub fn get_fresh_payload(
+    conn: &Connection,
+    source_key: &str,
+    max_age_s: f64,
+) -> Result<Option<Value>> {
+    let Some(row) = get(conn, source_key)? else {
+        return Ok(None);
+    };
+    let Some(pulled) = parse_iso_ts(&row.pulled_at) else {
+        return Ok(None);
+    };
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs_f64())
+        .unwrap_or(0.0);
+    if now - pulled > max_age_s {
+        return Ok(None);
+    }
+    Ok(Some(serde_json::from_str(&row.payload_json)?))
 }
 
 pub fn count(conn: &Connection) -> Result<i64> {

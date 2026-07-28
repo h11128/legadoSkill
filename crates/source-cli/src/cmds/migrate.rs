@@ -1,18 +1,26 @@
 //! Domain migrate CLI.
 
+use std::fs;
+use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
-use source_mcp::{FsChannelPort, McpClient, McpEndpoint, McpSourceRepository};
+use serde_json::json;
+use source_mcp::{FsChannelPort, McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort};
 use source_migrate::migrate_book_source;
-use source_ports::{ChannelPort, SourceRepository};
-use source_types::SourceKey;
+use source_ports::{ChannelPort, SourceRepository, VerifyPort};
+use source_types::{CheckOpts, SourceKey};
 
 pub struct MigrateArgs {
     pub from_url: String,
     pub to_url: String,
     pub dry_run: bool,
     pub keep_old: bool,
+    pub verify: bool,
+    pub enable: bool,
+    pub out: Option<PathBuf>,
 }
 
 pub fn run_migrate(args: MigrateArgs) -> ExitCode {
@@ -46,7 +54,7 @@ pub fn run_migrate(args: MigrateArgs) -> ExitCode {
             return ExitCode::from(5);
         }
     };
-    let repo = McpSourceRepository::new(client);
+    let repo = McpSourceRepository::new(Arc::clone(&client));
     let src = match repo.get(&SourceKey::new(args.from_url.trim())) {
         Ok(s) => s,
         Err(e) => {
@@ -54,18 +62,28 @@ pub fn run_migrate(args: MigrateArgs) -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let migrated = match migrate_book_source(&src, &args.from_url, &args.to_url) {
+    let mut migrated = match migrate_book_source(&src, &args.from_url, &args.to_url) {
         Ok(m) => m,
         Err(e) => {
             eprintln!("migrate: rewrite: {e}");
             return ExitCode::from(4);
         }
     };
+    if args.enable {
+        let mut v = migrated.into_value();
+        v["enabled"] = json!(true);
+        migrated = source_types::BookSource::new(v);
+    }
     if args.dry_run {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(migrated.as_value()).unwrap_or_default()
-        );
+        let report = json!({
+            "schema_version": "1",
+            "capability": "migrate",
+            "dry_run": true,
+            "from": args.from_url,
+            "to": args.to_url,
+            "source": migrated.as_value(),
+        });
+        print_report(&report, args.out.as_ref());
         return ExitCode::SUCCESS;
     }
     if let Err(e) = repo.save(&migrated) {
@@ -75,10 +93,48 @@ pub fn run_migrate(args: MigrateArgs) -> ExitCode {
     if !args.keep_old {
         let _ = repo.delete(&[SourceKey::new(args.from_url.trim())]);
     }
-    println!(
-        "REPORT_JSON:{{\"schema_version\":\"1\",\"capability\":\"migrate\",\"mode\":\"oneshot\",\"url\":{},\"status\":\"migrated\",\"message\":\"migrated\",\"migrate_to\":{}}}",
-        serde_json::to_string(args.from_url.trim()).unwrap(),
-        serde_json::to_string(args.to_url.trim()).unwrap()
-    );
+    let mut report = json!({
+        "schema_version": "1",
+        "capability": "migrate",
+        "mode": "oneshot",
+        "url": args.from_url.trim(),
+        "status": "migrated",
+        "message": "migrated",
+        "migrate_to": args.to_url.trim(),
+        "verify_ok": null,
+    });
+    if args.verify {
+        thread::sleep(Duration::from_secs(2));
+        let verify = McpVerifyPort::new(client);
+        match verify.check(&SourceKey::new(args.to_url.trim()), CheckOpts::default()) {
+            Ok(vr) => {
+                report["verify_ok"] = json!(vr.success);
+                report["verify_message"] = json!(vr.message);
+                if !vr.success {
+                    print_report(&report, args.out.as_ref());
+                    return ExitCode::from(1);
+                }
+            }
+            Err(e) => {
+                report["verify_error"] = json!(format!("{e}"));
+                print_report(&report, args.out.as_ref());
+                return ExitCode::from(2);
+            }
+        }
+    }
+    print_report(&report, args.out.as_ref());
     ExitCode::SUCCESS
+}
+
+fn print_report(report: &serde_json::Value, out: Option<&PathBuf>) {
+    if let Some(path) = out {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(
+            path,
+            serde_json::to_string_pretty(report).unwrap_or_default(),
+        );
+    }
+    println!("{}", serde_json::to_string_pretty(report).unwrap_or_default());
 }

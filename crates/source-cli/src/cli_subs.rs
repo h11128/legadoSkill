@@ -27,6 +27,8 @@ pub enum LedgerSub {
         result: String,
         #[arg(long)]
         note: Option<String>,
+        #[arg(long, help = "what went wrong / minutes wasted")]
+        waste: Option<String>,
     },
     Show {
         #[arg(long, default_value_t = 20)]
@@ -43,6 +45,8 @@ pub enum ProgressSub {
         rules: Option<PathBuf>,
         #[arg(long, default_value_t = false)]
         l0_only: bool,
+        #[arg(long)]
+        goal: Option<usize>,
     },
     Next {
         #[arg(long)]
@@ -51,59 +55,37 @@ pub enum ProgressSub {
         rules: Option<PathBuf>,
         #[arg(long, default_value_t = false)]
         l0_only: bool,
+        #[arg(long)]
+        goal: Option<usize>,
     },
 }
 
 #[derive(Subcommand)]
-pub enum CheckSub {
-    Channel,
-    Precheck {
+pub enum PatternSub {
+    /// Cluster verify-ok sources into PatternCluster (full BookSource rules).
+    Extract {
         #[arg(long)]
-        urls_file: PathBuf,
-        #[arg(long, default_value_t = 4.0)]
-        timeout: f64,
-    },
-    Batch {
+        sources_file: Option<PathBuf>,
         #[arg(long)]
-        urls_file: PathBuf,
-        #[arg(long, default_value = "我的")]
-        keyword: String,
-        #[arg(long, default_value_t = 80)]
-        batch_size: usize,
-        #[arg(long, default_value_t = 64)]
-        thread_count: u32,
-        #[arg(long, default_value_t = 45.0)]
-        timeout: f64,
-    },
-    Full {
+        db: Option<PathBuf>,
         #[arg(long)]
-        urls_file: PathBuf,
-        #[arg(long, default_value = "我的")]
-        keyword: String,
-        #[arg(long, default_value_t = 80)]
-        batch_size: usize,
-        #[arg(long, default_value_t = 64)]
-        thread_count: u32,
-        #[arg(long, default_value_t = 120.0)]
-        timeout: f64,
-    },
-}
-
-#[derive(Subcommand)]
-pub enum QueueSub {
-    RefreshIndex {
-        #[arg(long)]
-        out: Option<PathBuf>,
-    },
-    Rt {
-        #[arg(long)]
-        index: Option<PathBuf>,
-        #[arg(long)]
-        out: Option<PathBuf>,
-        #[arg(long, default_value = "搜索失效")]
-        group: String,
-        #[arg(long, default_value_t = 100)]
+        out_dir: Option<PathBuf>,
+        #[arg(long, default_value_t = 3)]
+        min_size: u32,
+        #[arg(long, default_value_t = 0)]
         limit: usize,
+        #[arg(long, default_value_t = false)]
+        write_db: bool,
+        /// If snapshot missing full rules, pull via MCP (default true). Cached rows are reused.
+        #[arg(long, default_value_t = true)]
+        #[arg(long = "no-from-mcp", action = clap::ArgAction::SetFalse)]
+        from_mcp: bool,
+        #[arg(long, default_value_t = false)]
+        enabled_only: bool,
+        /// Prefer ledger fixed/校验成功 keys (sets verify_ok). Default true.
+        #[arg(long, default_value_t = true)]
+        #[arg(long = "no-fixed-only", action = clap::ArgAction::SetFalse)]
+        fixed_only: bool,
     },
 }
 
@@ -133,6 +115,93 @@ pub enum RetroSub {
         #[arg(long, default_value_t = true)]
         #[arg(long = "no-seal", action = clap::ArgAction::SetFalse)]
         seal: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SourceSub {
+    Triage {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        fail_msg: Option<String>,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    Fetch {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        page: Option<String>,
+        #[arg(long, default_value = "temp/full_fix/cache/html")]
+        dump_dir: PathBuf,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    Verify {
+        #[arg(long)]
+        url: String,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long, default_value_t = 45_000)]
+        timeout_ms: u64,
+        #[arg(long, default_value_t = true)]
+        auto_cooldown: bool,
+        #[arg(long, default_value_t = 0.0)]
+        cooldown: f64,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    Log {
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        status: String,
+        #[arg(long, default_value = "我的")]
+        keyword: String,
+        #[arg(long)]
+        root_cause: Option<String>,
+        #[arg(long)]
+        check_json: Option<PathBuf>,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        index: Option<PathBuf>,
+        #[arg(long)]
+        agent: Option<String>,
+    },
+    Index {
+        #[arg(long)]
+        from_log: PathBuf,
+        #[arg(long)]
+        index: PathBuf,
+    },
+    Channel,
+}
+
+#[derive(Subcommand)]
+pub enum ClaimSub {
+    Validate {
+        #[arg(long)]
+        check_json: PathBuf,
+    },
+    AppendIndex {
+        #[arg(long)]
+        index: PathBuf,
+        #[arg(long)]
+        status: String,
+        #[arg(long)]
+        url: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        evidence: Option<String>,
+        #[arg(long)]
+        agent: Option<String>,
+        #[arg(long)]
+        root_cause: Option<String>,
     },
 }
 

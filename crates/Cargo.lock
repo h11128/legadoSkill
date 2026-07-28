@@ -1292,6 +1292,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "thiserror",
  "url",
 ]
@@ -1300,11 +1301,17 @@ dependencies = [
 name = "source_check"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "regex",
  "serde",
  "serde_json",
+ "source_gate",
  "source_mcp",
+ "source_patch",
  "source_ports",
  "source_types",
+ "tempfile",
+ "thiserror",
  "ureq",
  "url",
 ]
@@ -1316,12 +1323,14 @@ dependencies = [
  "chrono",
  "clap",
  "encoding_rs",
+ "regex",
  "serde_json",
  "source_adapters",
  "source_cache",
  "source_check",
  "source_closeout",
  "source_contracts",
+ "source_db",
  "source_diagnose",
  "source_gate",
  "source_hunt",
@@ -1329,12 +1338,14 @@ dependencies = [
  "source_migrate",
  "source_parse",
  "source_patch",
+ "source_pattern",
  "source_ports",
  "source_probe",
  "source_queue",
  "source_spine",
  "source_types",
  "source_video",
+ "tempfile",
  "ureq",
  "url",
 ]
@@ -1367,12 +1378,14 @@ dependencies = [
 name = "source_db"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "rusqlite",
  "serde",
  "serde_json",
  "source_types",
  "tempfile",
  "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -1507,10 +1520,14 @@ name = "source_queue"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "regex",
  "serde",
  "serde_json",
  "source_mcp",
  "source_types",
+ "tempfile",
+ "thiserror",
+ "url",
 ]
 
 [[package]]

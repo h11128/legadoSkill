@@ -27,6 +27,16 @@ pub struct DiagnoseArgs {
     pub l2_timeout: f64,
     /// Skip MCP debug_source; diagnose from this debug log file.
     pub debug_file: Option<PathBuf>,
+    pub out: Option<PathBuf>,
+}
+
+fn write_out(args: &DiagnoseArgs, payload: &str) {
+    if let Some(path) = &args.out {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(path, payload);
+    }
 }
 
 fn default_rules_path() -> PathBuf {
@@ -68,7 +78,7 @@ fn attach_probe_tips(diag: &mut source_types::DiagnoseResult, key: &str) {
 }
 
 pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
-    let path = args.rules.unwrap_or_else(default_rules_path);
+    let path = args.rules.clone().unwrap_or_else(default_rules_path);
     let rules = match load_rules(&path) {
         Ok(r) => r,
         Err(e) => {
@@ -107,7 +117,9 @@ pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
         d.tips = layer_tips(&d);
         let v = serde_json::to_value(&d).unwrap_or_default();
         let _ = validate_diagnose(&v);
-        println!("{}", serde_json::to_string_pretty(&d).unwrap_or_default());
+        let payload = serde_json::to_string_pretty(&d).unwrap_or_default();
+        write_out(&args, &payload);
+        println!("{payload}");
         return ExitCode::from(3);
     }
 
@@ -154,6 +166,8 @@ pub fn run_diagnose(args: DiagnoseArgs) -> ExitCode {
         eprintln!("diagnose: contract: {e}");
         return ExitCode::from(4);
     }
-    println!("{}", serde_json::to_string_pretty(&d).unwrap_or_default());
+    let payload = serde_json::to_string_pretty(&d).unwrap_or_default();
+    write_out(&args, &payload);
+    println!("{payload}");
     ExitCode::SUCCESS
 }

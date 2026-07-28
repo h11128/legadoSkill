@@ -4,10 +4,12 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use chrono::Utc;
 use source_adapters::{AdapterRegistry, RegistryRepairPlugin};
+use source_cache::{cooldown_for, note_rate_limit, note_verify, CachePaths};
 use source_diagnose::ParseDiagnosePort;
 use source_gate::{classify_one_l0, load_rules};
 use source_mcp::{
@@ -17,6 +19,7 @@ use source_ports::{ChannelPort, Clock, DiagnosePort, HtmlFetchPort, SourceReposi
 use source_spine::{run_repair_oneshot, DiagnoseInput, GateInput, PlanOrPlugin, RepairPorts};
 use source_types::{FetchResult, HeaderMap, Layer, PortError, SourceKey, Url};
 
+use super::repair_outcome::RepairOneOutcome;
 use super::search_plan::{build_search_layer_plan, SearchPlanOutcome};
 
 #[cfg(feature = "gate_full")]
@@ -79,12 +82,42 @@ pub fn repair_one_url(
     key: &str,
     skip_diagnose: bool,
 ) -> ExitCode {
+    repair_one_outcome(
+        url,
+        rules,
+        l0_only,
+        tcp_timeout,
+        l2_timeout,
+        dry_run,
+        no_verify,
+        html,
+        prefetch,
+        key,
+        skip_diagnose,
+    )
+    .exit
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn repair_one_outcome(
+    url: &str,
+    rules: Option<PathBuf>,
+    l0_only: bool,
+    tcp_timeout: f64,
+    l2_timeout: f64,
+    dry_run: bool,
+    no_verify: bool,
+    html: Option<PathBuf>,
+    prefetch: bool,
+    key: &str,
+    skip_diagnose: bool,
+) -> RepairOneOutcome {
     let path = rules.unwrap_or_else(default_rules_path);
     let rules = match load_rules(&path) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("repair: load rules: {e}");
-            return ExitCode::from(4);
+            return RepairOneOutcome::err(4, &e.to_string());
         }
     };
 
@@ -110,31 +143,31 @@ pub fn repair_one_url(
         Ok(e) => e,
         Err(e) => {
             eprintln!("repair: mcp defaults: {e}");
-            return ExitCode::from(4);
+            return RepairOneOutcome::err(4, &e.to_string());
         }
     };
     let client = Arc::new(McpClient::new(ep).with_client_name("source_cli_repair"));
     if let Err(e) = client.ensure_session() {
         eprintln!("repair: mcp session: {e}");
-        return ExitCode::from(2);
+        return RepairOneOutcome::err(2, &e.to_string());
     }
 
     let channel = match FsChannelPort::from_repo() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("repair: channel: {e}");
-            return ExitCode::from(4);
+            return RepairOneOutcome::err(4, &e.to_string());
         }
     };
     if let Err(e) = channel.assert_idle_for_repair() {
         eprintln!("repair: {e}");
-        return ExitCode::from(5);
+        return RepairOneOutcome::err(5, &e.to_string());
     }
     let _guard = match channel.acquire_repair() {
         Ok(g) => g,
         Err(e) => {
             eprintln!("repair: acquire: {e}");
-            return ExitCode::from(5);
+            return RepairOneOutcome::err(5, &e.to_string());
         }
     };
 
@@ -144,7 +177,7 @@ pub fn repair_one_url(
         Ok(s) => s,
         Err(e) => {
             eprintln!("repair: get_source: {e}");
-            return ExitCode::from(2);
+            return RepairOneOutcome::err(2, &e.to_string());
         }
     };
     let prep_notes = super::oneshot_prep::prep_source_before_repair(&mut source, &repo, dry_run);
@@ -152,6 +185,26 @@ pub fn repair_one_url(
         eprintln!("repair: prep {}", prep_notes.join(","));
     }
     let source_for_diag = source.clone();
+
+    let cache_paths = source_mcp::repo_root()
+        .ok()
+        .map(CachePaths::from_root);
+    let concurrent_rate = source
+        .as_value()
+        .get("concurrentRate")
+        .and_then(|v| v.as_str());
+    let cooldown_s = if no_verify {
+        0.0
+    } else {
+        cache_paths
+            .as_ref()
+            .and_then(|p| cooldown_for(p, url.trim(), concurrent_rate).ok())
+            .unwrap_or(0.0)
+    };
+    if cooldown_s > 0.0 {
+        eprintln!("repair: cooldown {cooldown_s:.1}s");
+        thread::sleep(Duration::from_secs_f64(cooldown_s));
+    }
 
     let debug_text = if skip_diagnose {
         String::new()
@@ -176,12 +229,12 @@ pub fn repair_one_url(
                 Ok(u) => builder = builder.insert_html(u, body),
                 Err(e) => {
                     eprintln!("repair: bad url for html inject: {e}");
-                    return ExitCode::from(4);
+                    return RepairOneOutcome::err(4, &e.to_string());
                 }
             },
             Err(e) => {
                 eprintln!("repair: read html: {e}");
-                return ExitCode::from(4);
+                return RepairOneOutcome::err(4, &e.to_string());
             }
         }
     } else if prefetch {
@@ -192,7 +245,7 @@ pub fn repair_one_url(
             },
             Err(e) => {
                 eprintln!("repair: bad url: {e}");
-                return ExitCode::from(4);
+                return RepairOneOutcome::err(4, &e.to_string());
             }
         }
     }
@@ -203,7 +256,7 @@ pub fn repair_one_url(
         Ok(l) => l,
         Err(e) => {
             eprintln!("repair: ledger: {e}");
-            return ExitCode::from(4);
+            return RepairOneOutcome::err(4, &e.to_string());
         }
     };
     let clock = UtcClock;
@@ -286,9 +339,24 @@ pub fn repair_one_url(
         Ok(r) => r,
         Err(e) => {
             eprintln!("repair: spine: {e}");
-            return ExitCode::from(2);
+            return RepairOneOutcome::err(2, &e.to_string());
         }
     };
-    println!("{}", result.report_line);
-    ExitCode::from(result.exit_code as u8)
+    if let (Some(paths), Some(apply)) = (cache_paths.as_ref(), result.apply.as_ref()) {
+        if let Some(vr) = &apply.verify {
+            let _ = note_verify(
+                paths,
+                url.trim(),
+                vr.success,
+                vr.duration_ms.unwrap_or(0),
+                cooldown_s,
+            );
+            if !vr.success
+                && (vr.message.contains("403") || vr.message.contains("429"))
+            {
+                let _ = note_rate_limit(paths, url.trim(), (cooldown_s + 5.0).max(20.0));
+            }
+        }
+    }
+    RepairOneOutcome::from_spine(result)
 }

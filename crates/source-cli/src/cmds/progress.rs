@@ -5,6 +5,7 @@ use std::process::ExitCode;
 
 use super::progress_ledger;
 use super::progress_ledger::ledger_blocked;
+use super::progress_goal::goal_status;
 use serde_json::{json, Value};
 use source_gate::{classify_one_l0, load_rules, SkipRule};
 
@@ -16,6 +17,7 @@ pub struct ProgressArgs {
     pub index: Option<PathBuf>,
     pub rules: Option<PathBuf>,
     pub l0_only: bool,
+    pub goal: Option<usize>,
 }
 
 fn default_index() -> PathBuf {
@@ -139,15 +141,16 @@ pub fn run_progress(args: ProgressArgs) -> ExitCode {
     if args.cmd == "status" {
         let queue = default_queue().and_then(|p| load_json(&p).ok());
         let cands = candidate_urls(&index, queue.as_ref());
-        println!(
-            "{}",
-            json!({
-                "index": index_path.to_string_lossy(),
-                "search_fail_candidates": cands.len(),
-                "from_queue": queue.is_some(),
-                "total": index.get("total").cloned().unwrap_or(json!(null)),
-            })
-        );
+        let mut status = json!({
+            "index": index_path.to_string_lossy(),
+            "search_fail_candidates": cands.len(),
+            "from_queue": queue.is_some(),
+            "total": index.get("total").cloned().unwrap_or(json!(null)),
+        });
+        if let Some(goal) = args.goal {
+            status["goal"] = goal_status(goal, None);
+        }
+        println!("{}", status);
         return ExitCode::SUCCESS;
     }
     if let Err(msg) = ensure_closeout_ready() {

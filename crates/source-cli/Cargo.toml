@@ -35,5 +35,11 @@ source_closeout = { workspace = true }
 source_check = { workspace = true }
 source_queue = { workspace = true }
 source_parse = { workspace = true }
+source_pattern = { workspace = true }
+source_db = { workspace = true }
 encoding_rs = { workspace = true }
+regex = { workspace = true }
 url = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

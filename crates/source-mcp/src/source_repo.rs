@@ -3,10 +3,12 @@
 use std::sync::Arc;
 
 use serde_json::{json, Value};
+use source_db::{host_key, iso_now, norm_source_key, Db, SourceSnapshotRow};
 use source_ports::SourceRepository;
 use source_types::{BookSource, PortError, SourceKey};
 
 use crate::client::McpClient;
+use crate::root::repo_root;
 
 const DISABLE_TAG: &str = "网站失效";
 
@@ -14,14 +16,31 @@ const DISABLE_TAG: &str = "网站失效";
 pub struct McpSourceRepository {
     client: Arc<McpClient>,
     ready: std::sync::OnceLock<()>,
+    use_cache: bool,
+    force_refresh: bool,
 }
 
 impl McpSourceRepository {
     pub fn new(client: Arc<McpClient>) -> Self {
+        let skip = std::env::var("REPAIR_SKIP_PHONE_CACHE")
+            .ok()
+            .is_some_and(|v| v == "1");
         Self {
             client,
             ready: std::sync::OnceLock::new(),
+            use_cache: !skip,
+            force_refresh: false,
         }
+    }
+
+    pub fn with_cache(mut self, use_cache: bool) -> Self {
+        self.use_cache = use_cache;
+        self
+    }
+
+    pub fn with_force_refresh(mut self, force_refresh: bool) -> Self {
+        self.force_refresh = force_refresh;
+        self
     }
 
     fn ensure_ready(&self) -> Result<(), PortError> {
@@ -33,7 +52,64 @@ impl McpSourceRepository {
         Ok(())
     }
 
+    fn try_cache(&self, url: &str) -> Option<BookSource> {
+        if !self.use_cache || self.force_refresh {
+            return None;
+        }
+        let root = repo_root().ok()?;
+        let (db, cfg) = Db::connect_defaults(&root).ok()?;
+        let key = norm_source_key(url);
+        let payload = db
+            .get_source_payload_fresh(&key, cfg.source_snapshot_ttl_s)
+            .ok()??;
+        let src = coerce_source(&payload)?;
+        let mut v = src.into_value();
+        v["_cache_hit"] = json!(true);
+        Some(BookSource::new(v))
+    }
+
+    fn cache_put(&self, url: &str, src: &BookSource) -> Result<(), PortError> {
+        if !self.use_cache {
+            return Ok(());
+        }
+        let root = repo_root()?;
+        let (db, _cfg) = Db::connect_defaults(&root)
+            .map_err(|e| PortError::Permanent(format!("db: {e}")))?;
+        let key = norm_source_key(url);
+        let v = src.as_value();
+        let payload =
+            serde_json::to_string(v).map_err(|e| PortError::Permanent(e.to_string()))?;
+        let row = SourceSnapshotRow {
+            source_key: key.clone(),
+            host_key: host_key(&key),
+            name: v
+                .get("bookSourceName")
+                .and_then(|x| x.as_str())
+                .map(str::to_string),
+            book_source_type: v
+                .get("bookSourceType")
+                .and_then(|x| x.as_i64())
+                .unwrap_or(0),
+            enabled: v.get("enabled").and_then(|x| x.as_bool()).unwrap_or(true),
+            group_name: v
+                .get("bookSourceGroup")
+                .and_then(|x| x.as_str())
+                .map(str::to_string),
+            respond_time_ms: v.get("respondTime").and_then(|x| x.as_i64()),
+            payload_json: payload,
+            pulled_at: iso_now(),
+        };
+        db.upsert_source_snapshot(&row)
+            .map_err(|e| PortError::Permanent(format!("snapshot upsert: {e}")))?;
+        Ok(())
+    }
+
     fn get_raw(&self, url: &str) -> Result<BookSource, PortError> {
+        for cand in url_candidates(url) {
+            if let Some(src) = self.try_cache(&cand) {
+                return Ok(src);
+            }
+        }
         self.ensure_ready()?;
         let mut last = String::new();
         for cand in url_candidates(url) {
@@ -43,7 +119,11 @@ impl McpSourceRepository {
             let raw = McpClient::extract_text(&result);
             last = raw.clone();
             let data = McpClient::parse_json_text(&raw);
-            if let Some(src) = coerce_source(&data) {
+            if let Some(mut src) = coerce_source(&data) {
+                let mut v = src.into_value();
+                v["_cache_hit"] = json!(false);
+                src = BookSource::new(v);
+                let _ = self.cache_put(&cand, &src);
                 return Ok(src);
             }
         }
@@ -71,6 +151,13 @@ impl SourceRepository for McpSourceRepository {
                 "preserveGroup": true,
             }),
         )?;
+        if let Some(u) = source
+            .as_value()
+            .get("bookSourceUrl")
+            .and_then(|v| v.as_str())
+        {
+            let _ = self.cache_put(u, source);
+        }
         Ok(())
     }
 
@@ -191,5 +278,56 @@ mod tests {
         apply_disable(&mut v, DISABLE_TAG);
         assert_eq!(v["enabled"], false);
         assert_eq!(v["bookSourceGroup"], "小说,网站失效");
+    }
+
+    #[test]
+    fn cache_hit_before_mcp() {
+        use source_db::{iso_now, norm_source_key, Db, SourceSnapshotRow};
+        use source_types::SourceKey;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_dir = dir.path().join("config");
+        std::fs::create_dir_all(&cfg_dir).expect("config dir");
+        std::fs::write(
+            cfg_dir.join("mcp_defaults.json"),
+            r#"{"mcp_url":"http://127.0.0.1:9/mcp","token":"test"}"#,
+        )
+        .expect("mcp defaults");
+        std::fs::create_dir_all(dir.path().join("temp/full_fix")).expect("cache dir");
+
+        let prev = std::env::var("LEGADO_SKILL_ROOT").ok();
+        std::env::set_var("LEGADO_SKILL_ROOT", dir.path());
+
+        let (db, _cfg) = Db::connect_defaults(dir.path()).expect("db");
+        let url = "https://cache-hit.example/";
+        let key = norm_source_key(url);
+        let payload = json!({
+            "bookSourceUrl": url,
+            "bookSourceName": "CacheHit",
+        });
+        db.upsert_source_snapshot(&SourceSnapshotRow {
+            source_key: key,
+            host_key: source_db::host_key(url),
+            name: Some("CacheHit".into()),
+            book_source_type: 0,
+            enabled: true,
+            group_name: None,
+            respond_time_ms: None,
+            payload_json: payload.to_string(),
+            pulled_at: iso_now(),
+        })
+        .expect("upsert");
+
+        let ep = crate::McpEndpoint::load_defaults().expect("endpoint");
+        let repo = McpSourceRepository::new(std::sync::Arc::new(crate::McpClient::new(ep)));
+        let src = repo
+            .get(&SourceKey::new(url))
+            .expect("cache hit should not need MCP");
+        assert_eq!(src.as_value()["_cache_hit"], json!(true));
+
+        match prev {
+            Some(p) => std::env::set_var("LEGADO_SKILL_ROOT", p),
+            None => std::env::remove_var("LEGADO_SKILL_ROOT"),
+        }
     }
 }

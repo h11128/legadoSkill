@@ -226,7 +226,7 @@ pub(crate) fn match_result(snap: &Value, url: &str) -> Option<Value> {
     None
 }
 
-pub(crate) fn is_repair_success(message: &str) -> bool {
+pub fn is_repair_success(message: &str) -> bool {
     let mut msg = message.to_string();
     for tok in ["发现正文失效", "发现目录失效", "发现规则为空", "发现失效"] {
         msg = msg.replace(tok, "");

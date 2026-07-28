@@ -6,6 +6,7 @@ mod jsonl;
 mod paths;
 mod pending;
 mod retro;
+mod session_index;
 mod skill;
 mod trap;
 
@@ -13,6 +14,7 @@ pub use jsonl::{read_jsonl, JsonRow};
 pub use paths::CloseoutPaths;
 pub use pending::{pending_closeout, PendingDetail};
 pub use retro::{append_retro, RetroAppendOpts, RetroRow};
+pub use session_index::{append_index, assert_fixed_allowed, load_check_json};
 pub use skill::{skill_fingerprint, skill_in_sync, sync_skill_to_cursor};
 pub use trap::gate_trap;
 

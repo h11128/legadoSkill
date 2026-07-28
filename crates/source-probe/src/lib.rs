@@ -4,6 +4,7 @@ mod forms;
 mod forms_js;
 mod hints;
 mod js_api;
+mod js_engine;
 mod live;
 mod paths;
 mod rank;
@@ -16,6 +17,7 @@ pub use hints::{
     BookListHints,
 };
 pub use js_api::{detect_js_search_api, JsSearchApi};
+pub use js_engine::{probe_js_engine, script_src_candidates, JsEngineHit};
 pub use live::{probe_search_live, LiveProbeResult};
 pub use paths::{common_path_candidates, COMMON_GET_TEMPLATES};
 pub use rank::{

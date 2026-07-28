@@ -132,6 +132,55 @@ pub fn apply_safe_rule_fixes(source: &mut BookSource) -> Vec<String> {
     changes
 }
 
+/// Static rule smell hints for triage (Python `repair_helpers.smell_rules`).
+pub fn smell_rules(source: &BookSource) -> Vec<serde_json::Value> {
+    use serde_json::json;
+
+    fn broad_a_href_re() -> &'static Regex {
+        static RE: OnceLock<Regex> = OnceLock::new();
+        RE.get_or_init(|| Regex::new(r"a@href##").unwrap())
+    }
+
+    fn read_link_re() -> &'static Regex {
+        static RE: OnceLock<Regex> = OnceLock::new();
+        RE.get_or_init(|| Regex::new(r"(?i)(在线阅读|开始阅读|全文)").unwrap())
+    }
+
+    let mut smells = Vec::new();
+    let v = source.as_value();
+    let info = v.get("ruleBookInfo").and_then(|x| x.as_object());
+    let toc = info
+        .and_then(|i| i.get("tocUrl"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    let name = info
+        .and_then(|i| i.get("name"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    if broad_a_href_re().is_match(toc) && !toc.contains("text.") {
+        smells.push(json!({
+            "field": "ruleBookInfo.tocUrl",
+            "issue": "broad_a_href_regex",
+            "hint": "May resolve first unmatched link to homepage; narrow selector",
+        }));
+    }
+    if name.contains("||") && name.contains("##") {
+        smells.push(json!({
+            "field": "ruleBookInfo.name",
+            "issue": "fallback_mixed_with_regex",
+            "hint": "Do not mix || fallback with ## replace on same field",
+        }));
+    }
+    if read_link_re().is_match(toc) && toc.to_ascii_lowercase().contains("read") {
+        smells.push(json!({
+            "field": "ruleBookInfo.tocUrl",
+            "issue": "maybe_content_not_catalog",
+            "hint": "tocUrl may point at content page; clear or retarget catalog",
+        }));
+    }
+    smells
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

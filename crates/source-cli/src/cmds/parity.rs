@@ -12,7 +12,12 @@ pub fn run_parity(args: ParityArgs) -> ExitCode {
     let suites: Vec<String> = if let Some(s) = args.suite {
         vec![s]
     } else {
-        vec!["rust-cli".into(), "contracts".into(), "inventory".into()]
+        vec![
+            "rust-cli".into(),
+            "contracts".into(),
+            "inventory".into(),
+            "search-parity".into(),
+        ]
     };
 
     let mut results = Vec::new();
@@ -21,6 +26,10 @@ pub fn run_parity(args: ParityArgs) -> ExitCode {
             "rust-cli" | "contracts" => cargo_test_workspace(),
             "inventory" => check_no_py_scripts(),
             "perf" => check_perf_baseline_exists(),
+            "search-parity" => super::parity_search::run_search_parity_suite()
+                .get("ok")
+                .and_then(|v: &serde_json::Value| v.as_bool())
+                .unwrap_or(false),
             other => {
                 eprintln!("parity: unknown suite {other}");
                 false
