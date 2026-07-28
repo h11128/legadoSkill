@@ -288,13 +288,14 @@ fn append_serial_retro(
     let status = serial_status(report);
     let msg = report
         .get("message")
+        .or_else(|| report.get("msg"))
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .chars()
         .take(160)
         .collect::<String>();
     let (trap, harness, script_fix) = serial_trap_harness(report, waste_s, &status);
-    let _ = append_retro(
+    match append_retro(
         paths,
         RetroAppendOpts {
             url: url.to_string(),
@@ -309,7 +310,14 @@ fn append_serial_retro(
             skill_fix: false,
             seal: false,
         },
-    );
+    ) {
+        Ok(_) => {}
+        Err(errs) => {
+            for e in errs {
+                eprintln!("serial retro: {e}");
+            }
+        }
+    }
 }
 
 pub fn run_serial_cmd(args: SerialArgs) -> ExitCode {

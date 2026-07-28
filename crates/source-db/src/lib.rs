@@ -104,6 +104,10 @@ impl Db {
         source_snapshot::count(&self.conn)
     }
 
+    pub fn delete_source_snapshot(&self, source_key: &str) -> Result<()> {
+        source_snapshot::delete(&self.conn, source_key)
+    }
+
     pub fn list_snapshot_payloads(
         &self,
         enabled_only: bool,

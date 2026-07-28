@@ -63,9 +63,22 @@ impl McpSourceRepository {
             .get_source_payload_fresh(&key, cfg.source_snapshot_ttl_s)
             .ok()??;
         let src = coerce_source(&payload)?;
-        let mut v = src.into_value();
+        let mut v = src.as_value().clone();
         v["_cache_hit"] = json!(true);
         Some(BookSource::new(v))
+    }
+
+    fn cache_delete(&self, url: &str) -> Result<(), PortError> {
+        if !self.use_cache {
+            return Ok(());
+        }
+        let root = repo_root()?;
+        let (db, _cfg) = Db::connect_defaults(&root)
+            .map_err(|e| PortError::Permanent(format!("db: {e}")))?;
+        let key = norm_source_key(url);
+        db.delete_source_snapshot(&key)
+            .map_err(|e| PortError::Permanent(format!("snapshot delete: {e}")))?;
+        Ok(())
     }
 
     fn cache_put(&self, url: &str, src: &BookSource) -> Result<(), PortError> {
@@ -76,9 +89,10 @@ impl McpSourceRepository {
         let (db, _cfg) = Db::connect_defaults(&root)
             .map_err(|e| PortError::Permanent(format!("db: {e}")))?;
         let key = norm_source_key(url);
-        let v = src.as_value();
+        let mut v = src.as_value().clone();
+        strip_ephemeral(&mut v);
         let payload =
-            serde_json::to_string(v).map_err(|e| PortError::Permanent(e.to_string()))?;
+            serde_json::to_string(&v).map_err(|e| PortError::Permanent(e.to_string()))?;
         let row = SourceSnapshotRow {
             source_key: key.clone(),
             host_key: host_key(&key),
@@ -104,12 +118,7 @@ impl McpSourceRepository {
         Ok(())
     }
 
-    fn get_raw(&self, url: &str) -> Result<BookSource, PortError> {
-        for cand in url_candidates(url) {
-            if let Some(src) = self.try_cache(&cand) {
-                return Ok(src);
-            }
-        }
+    fn fetch_mcp(&self, url: &str) -> Result<BookSource, PortError> {
         self.ensure_ready()?;
         let mut last = String::new();
         for cand in url_candidates(url) {
@@ -119,10 +128,10 @@ impl McpSourceRepository {
             let raw = McpClient::extract_text(&result);
             last = raw.clone();
             let data = McpClient::parse_json_text(&raw);
-            if let Some(mut src) = coerce_source(&data) {
-                let mut v = src.into_value();
+            if let Some(src) = coerce_source(&data) {
+                let mut v = src.as_value().clone();
                 v["_cache_hit"] = json!(false);
-                src = BookSource::new(v);
+                let src = BookSource::new(v);
                 let _ = self.cache_put(&cand, &src);
                 return Ok(src);
             }
@@ -131,6 +140,17 @@ impl McpSourceRepository {
             "unexpected get_source payload: {}",
             trunc(&last, 300)
         )))
+    }
+
+    fn get_raw(&self, url: &str) -> Result<BookSource, PortError> {
+        if !self.force_refresh {
+            for cand in url_candidates(url) {
+                if let Some(src) = self.try_cache(&cand) {
+                    return Ok(src);
+                }
+            }
+        }
+        self.fetch_mcp(url)
     }
 }
 
@@ -141,7 +161,9 @@ impl SourceRepository for McpSourceRepository {
 
     fn save(&self, source: &BookSource) -> Result<(), PortError> {
         self.ensure_ready()?;
-        let payload = serde_json::to_string(source.as_value())
+        let mut v = source.as_value().clone();
+        strip_ephemeral(&mut v);
+        let payload = serde_json::to_string(&v)
             .map_err(|e| PortError::ContractViolation(format!("serialize source: {e}")))?;
         let _ = self.client.tools_call(
             "save_source",
@@ -151,18 +173,15 @@ impl SourceRepository for McpSourceRepository {
                 "preserveGroup": true,
             }),
         )?;
-        if let Some(u) = source
-            .as_value()
-            .get("bookSourceUrl")
-            .and_then(|v| v.as_str())
-        {
-            let _ = self.cache_put(u, source);
+        if let Some(u) = v.get("bookSourceUrl").and_then(|x| x.as_str()).map(str::to_string) {
+            let _ = self.cache_put(&u, &BookSource::new(v));
         }
         Ok(())
     }
 
     fn disable(&self, key: &SourceKey) -> Result<(), PortError> {
-        let mut value = self.get(key)?.into_value();
+        let mut value = self.fetch_mcp(key.as_str())?.into_value();
+        strip_ephemeral(&mut value);
         apply_disable(&mut value, DISABLE_TAG);
         self.ensure_ready()?;
         let payload = serde_json::to_string(&value)
@@ -175,6 +194,14 @@ impl SourceRepository for McpSourceRepository {
                 "preserveGroup": false,
             }),
         )?;
+        let disabled = BookSource::new(value);
+        if let Some(u) = disabled
+            .as_value()
+            .get("bookSourceUrl")
+            .and_then(|x| x.as_str())
+        {
+            let _ = self.cache_put(u, &disabled);
+        }
         Ok(())
     }
 
@@ -184,6 +211,11 @@ impl SourceRepository for McpSourceRepository {
         let _ = self
             .client
             .tools_call("delete_sources", json!({ "urls": urls }))?;
+        for key in keys {
+            for cand in url_candidates(key.as_str()) {
+                let _ = self.cache_delete(&cand);
+            }
+        }
         Ok(())
     }
 }
@@ -198,6 +230,12 @@ fn coerce_source(data: &Value) -> Option<BookSource> {
         }
     }
     None
+}
+
+fn strip_ephemeral(value: &mut Value) {
+    if let Some(obj) = value.as_object_mut() {
+        obj.remove("_cache_hit");
+    }
 }
 
 fn apply_disable(value: &mut Value, tag: &str) {

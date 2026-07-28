@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use serde_json::{json, Value};
-use source_mcp::{McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort};
-use source_ports::{SourceRepository, VerifyPort};
+use source_mcp::{McpClient, McpEndpoint, McpSourceRepository, McpVerifyPort, FsChannelPort};
+use source_ports::{ChannelPort, SourceRepository, VerifyPort};
 use source_types::{CheckOpts, PortError, SourceKey};
 
 use crate::batch::load_urls_file;
@@ -179,6 +179,8 @@ fn deep_one(
 
 pub fn run_deep_wave(opts: DeepWaveOpts) -> Result<Value, PortError> {
     let urls = load_urls_file(&opts.urls_file)?;
+    let channel = FsChannelPort::from_repo()?;
+    let _guard = channel.acquire_repair()?;
     let ep = McpEndpoint::load_defaults()?;
     let client = Arc::new(McpClient::new(ep).with_client_name("deep_wave"));
     client.ensure_session()?;

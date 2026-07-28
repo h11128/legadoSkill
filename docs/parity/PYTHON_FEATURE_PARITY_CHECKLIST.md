@@ -120,8 +120,8 @@ Last audited: 2026-07-28 (zero-gap batch — cache TTL, bench/deep/search wave, 
 - [x] `cargo test --workspace` pass (170+ unit tests)
 - [x] `cargo clippy --workspace --all-targets -- -D warnings`
 - [x] `source-cli parity` green (4/4 suites)
-- [ ] Live MCP smoke: discover, channel, oneshot repair, batch check
-- [ ] Independent code review
+- [x] Live MCP smoke: discover, channel, oneshot repair, batch check
+- [x] Independent code review (6756eda + follow-up fixes)
 
 ## Verification commands
 

@@ -102,3 +102,11 @@ pub fn count(conn: &Connection) -> Result<i64> {
     let n: i64 = conn.query_row("SELECT COUNT(*) FROM source_snapshot", [], |r| r.get(0))?;
     Ok(n)
 }
+
+pub fn delete(conn: &Connection, source_key: &str) -> Result<()> {
+    conn.execute(
+        "DELETE FROM source_snapshot WHERE source_key=?1",
+        [source_key],
+    )?;
+    Ok(())
+}

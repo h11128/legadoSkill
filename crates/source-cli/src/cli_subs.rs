@@ -197,7 +197,7 @@ pub enum ClaimSub {
         #[arg(long)]
         name: Option<String>,
         #[arg(long)]
-        evidence: Option<String>,
+        evidence: Option<PathBuf>,
         #[arg(long)]
         agent: Option<String>,
         #[arg(long)]

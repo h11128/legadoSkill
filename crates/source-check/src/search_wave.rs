@@ -10,9 +10,9 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use source_mcp::{
     batch_check_urls, batch_max_wait_s, is_repair_success, McpClient, McpEndpoint,
-    McpSourceRepository,
+    McpSourceRepository, FsChannelPort,
 };
-use source_ports::SourceRepository;
+use source_ports::{ChannelPort, SourceRepository};
 use source_types::{PortError, SourceKey};
 
 use crate::batch::load_urls_file;
@@ -125,6 +125,8 @@ fn work_inner(repo: &McpSourceRepository, url: &str) -> Result<Value, PortError>
 pub fn run_search_wave(opts: SearchWaveOpts) -> Result<Value, PortError> {
     let urls = load_urls_file(&opts.urls_file)?;
     let t0 = Instant::now();
+    let channel = FsChannelPort::from_repo()?;
+    let _guard = channel.acquire_repair()?;
     let ep = McpEndpoint::load_defaults()?;
     let client = Arc::new(McpClient::new(ep).with_client_name("search_wave"));
     client.ensure_session()?;

@@ -6,7 +6,9 @@ use std::time::Instant;
 
 use chrono::Utc;
 use serde_json::{json, Value};
-use source_mcp::{batch_check_urls, is_repair_success, DualLedgerPort, McpClient, McpEndpoint};
+use source_mcp::{
+    batch_check_urls, is_repair_success, DualLedgerPort, FsChannelPort, McpClient, McpEndpoint,
+};
 use source_ports::LedgerPort;
 use source_types::{LedgerRow, LedgerStep, PortError, Url};
 
@@ -28,6 +30,9 @@ pub fn run_harvest(opts: HarvestOpts) -> Result<Value, PortError> {
     if urls.is_empty() {
         return Err(PortError::Permanent("no urls".into()));
     }
+
+    let channel = FsChannelPort::from_repo()?;
+    let _bulk = channel.acquire_bulk()?;
 
     let ep = McpEndpoint::load_defaults()?;
     let client = McpClient::new(ep).with_client_name("source_harvest");
